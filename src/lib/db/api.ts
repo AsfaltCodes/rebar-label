@@ -2,7 +2,7 @@ import { type Template, type Job, type Label, type AppSettings, DEFAULT_SETTINGS
 
 // Check if running inside Tauri
 function isTauri(): boolean {
-  return typeof window !== 'undefined' && '__TAURI__' in window;
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 }
 
 // LocalStorage-based fallback for dev mode (no Tauri)
@@ -55,11 +55,12 @@ class LocalDB {
 
   // Jobs
   async listJobs(): Promise<Job[]> {
-    return this.getStore<Job>('jobs');
+    return this.getStore<Job>('jobs').map(j => ({ ...j, job_field_values: j.job_field_values || {} }));
   }
 
   async getJob(id: number): Promise<Job | null> {
-    return this.getStore<Job>('jobs').find(j => j.id === id) || null;
+    const job = this.getStore<Job>('jobs').find(j => j.id === id) || null;
+    return job ? { ...job, job_field_values: job.job_field_values || {} } : null;
   }
 
   async createJob(data: Omit<Job, 'id' | 'created_at' | 'updated_at'>): Promise<Job> {
@@ -150,9 +151,13 @@ class TauriDB {
   async createTemplate(data: Omit<Template, 'id' | 'created_at' | 'updated_at'>): Promise<Template> {
     const raw = await this.invoke<any>('create_template', {
       name: data.name,
+      sizingMode: data.sizing_mode || 'grid',
+      columns: data.columns || 2,
+      rows: data.rows || 5,
       labelWidthMm: data.label_width_mm,
       labelHeightMm: data.label_height_mm,
       logoEnabled: data.logo_enabled,
+      phoneEnabled: data.phone_enabled || false,
       fields: JSON.stringify(data.fields),
     });
     return { ...raw, fields: JSON.parse(raw.fields || '[]') };
@@ -161,9 +166,13 @@ class TauriDB {
   async updateTemplate(id: number, data: Partial<Omit<Template, 'id' | 'created_at' | 'updated_at'>>): Promise<Template> {
     const payload: Record<string, unknown> = { id };
     if (data.name !== undefined) payload.name = data.name;
+    if (data.sizing_mode !== undefined) payload.sizingMode = data.sizing_mode;
+    if (data.columns !== undefined) payload.columns = data.columns;
+    if (data.rows !== undefined) payload.rows = data.rows;
     if (data.label_width_mm !== undefined) payload.labelWidthMm = data.label_width_mm;
     if (data.label_height_mm !== undefined) payload.labelHeightMm = data.label_height_mm;
     if (data.logo_enabled !== undefined) payload.logoEnabled = data.logo_enabled;
+    if (data.phone_enabled !== undefined) payload.phoneEnabled = data.phone_enabled;
     if (data.fields !== undefined) payload.fields = JSON.stringify(data.fields);
     const raw = await this.invoke<any>('update_template', payload);
     return { ...raw, fields: JSON.parse(raw.fields || '[]') };
@@ -175,13 +184,13 @@ class TauriDB {
 
   async listJobs(): Promise<Job[]> {
     const raw = await this.invoke<any[]>('list_jobs');
-    return raw.map(j => ({ ...j, fields: JSON.parse(j.fields || '[]') }));
+    return raw.map(j => ({ ...j, fields: JSON.parse(j.fields || '[]'), job_field_values: JSON.parse(j.job_field_values || '{}') }));
   }
 
   async getJob(id: number): Promise<Job | null> {
     const raw = await this.invoke<any>('get_job', { id });
     if (!raw) return null;
-    return { ...raw, fields: JSON.parse(raw.fields || '[]') };
+    return { ...raw, fields: JSON.parse(raw.fields || '[]'), job_field_values: JSON.parse(raw.job_field_values || '{}') };
   }
 
   async createJob(data: Omit<Job, 'id' | 'created_at' | 'updated_at'>): Promise<Job> {
@@ -189,15 +198,22 @@ class TauriDB {
       name: data.name,
       sourceTemplateId: data.source_template_id,
       fields: JSON.stringify(data.fields),
+      sizingMode: data.sizing_mode || 'grid',
+      columns: data.columns || 2,
+      rows: data.rows || 5,
       labelWidthMm: data.label_width_mm,
       labelHeightMm: data.label_height_mm,
       logoEnabled: data.logo_enabled,
+      phoneEnabled: data.phone_enabled || false,
       pageSize: data.page_size,
       pageWidthMm: data.page_width_mm,
       pageHeightMm: data.page_height_mm,
       pageOrientation: data.page_orientation,
+      clientName: data.client_name || '',
+      notes: data.notes || '',
+      jobFieldValues: JSON.stringify(data.job_field_values || {}),
     });
-    return { ...raw, fields: JSON.parse(raw.fields || '[]') };
+    return { ...raw, fields: JSON.parse(raw.fields || '[]'), job_field_values: JSON.parse(raw.job_field_values || '{}') };
   }
 
   async updateJob(id: number, data: Partial<Omit<Job, 'id' | 'created_at' | 'updated_at'>>): Promise<Job> {
@@ -208,8 +224,11 @@ class TauriDB {
     if (data.page_width_mm !== undefined) payload.pageWidthMm = data.page_width_mm;
     if (data.page_height_mm !== undefined) payload.pageHeightMm = data.page_height_mm;
     if (data.page_orientation !== undefined) payload.pageOrientation = data.page_orientation;
+    if (data.client_name !== undefined) payload.clientName = data.client_name;
+    if (data.notes !== undefined) payload.notes = data.notes;
+    if (data.job_field_values !== undefined) payload.jobFieldValues = JSON.stringify(data.job_field_values);
     const raw = await this.invoke<any>('update_job', payload);
-    return { ...raw, fields: JSON.parse(raw.fields || '[]') };
+    return { ...raw, fields: JSON.parse(raw.fields || '[]'), job_field_values: JSON.parse(raw.job_field_values || '{}') };
   }
 
   async deleteJob(id: number): Promise<void> {
@@ -265,13 +284,14 @@ class TauriDB {
     return {
       logo_image_path: raw.logo_image_path || '',
       default_page_size: raw.default_page_size || 'A4',
-      default_template_id: raw.default_template_id || '',
+      default_page_orientation: (raw.default_page_orientation as 'portrait' | 'landscape') || 'portrait',
       company_name: raw.company_name || '',
-      margin_top_mm: parseFloat(raw.margin_top_mm) || 10,
-      margin_bottom_mm: parseFloat(raw.margin_bottom_mm) || 10,
-      margin_left_mm: parseFloat(raw.margin_left_mm) || 10,
-      margin_right_mm: parseFloat(raw.margin_right_mm) || 10,
-      label_gap_mm: parseFloat(raw.label_gap_mm) || 2,
+      company_phone: raw.company_phone || '',
+      margin_top_mm: raw.margin_top_mm !== undefined ? parseFloat(raw.margin_top_mm) : 0,
+      margin_bottom_mm: raw.margin_bottom_mm !== undefined ? parseFloat(raw.margin_bottom_mm) : 0,
+      margin_left_mm: raw.margin_left_mm !== undefined ? parseFloat(raw.margin_left_mm) : 0,
+      margin_right_mm: raw.margin_right_mm !== undefined ? parseFloat(raw.margin_right_mm) : 0,
+      label_gap_mm: raw.label_gap_mm !== undefined ? parseFloat(raw.label_gap_mm) : 0,
     };
   }
 

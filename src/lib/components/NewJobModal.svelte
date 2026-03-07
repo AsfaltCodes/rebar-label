@@ -1,58 +1,74 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import type { Template, Job } from '$lib/db/types';
   import { PAGE_SIZES } from '$lib/db/types';
   import { settings } from '$lib/stores/settingsStore';
-  import { showNewJobModal } from '$lib/stores/uiStore';
+  import { showNewJobModal, currentScreen } from '$lib/stores/uiStore';
+  import { addToast } from '$lib/stores/toastStore';
+  import { generateJobName } from '$lib/utils/sessionName';
+  import Icon from './ui/Icon.svelte';
+  import Button from './ui/Button.svelte';
 
   export let onCreated: (job: Job) => void = () => {};
 
   let templates: Template[] = [];
   let selectedTemplateId: number | null = null;
   let jobName = '';
-  let pageSize = $settings.default_page_size || 'A4';
-  let orientation: 'portrait' | 'landscape' = 'portrait';
-  let customWidth = 210;
-  let customHeight = 297;
+  let clientName = '';
+  let editingName = false;
 
-  onMount(async () => {
+  // Re-initialize when modal opens — clear stale data first to avoid showing old templates
+  $: if ($showNewJobModal) {
+    editingName = false;
+    clientName = '';
+    templates = [];
+    selectedTemplateId = null;
+    loadData();
+  }
+
+  async function loadData() {
     try {
       const { db } = await import('$lib/db/api');
       templates = await db.listTemplates();
+      const jobs = await db.listJobs();
+      jobName = generateJobName(new Date(), jobs.map(j => ({ created_at: j.created_at })));
       if (templates.length > 0) {
         selectedTemplateId = templates[0].id;
       }
     } catch (e) {
-      console.error('Failed to load templates:', e);
+      console.error('Failed to load data:', e);
     }
-  });
+  }
 
   $: selectedTemplate = templates.find(t => t.id === selectedTemplateId) || null;
-  $: pageDims = pageSize === 'custom'
-    ? { width: customWidth, height: customHeight }
-    : PAGE_SIZES[pageSize] || PAGE_SIZES['A4'];
-  $: effectiveWidth = orientation === 'landscape' ? pageDims.height : pageDims.width;
-  $: effectiveHeight = orientation === 'landscape' ? pageDims.width : pageDims.height;
 
   async function handleCreate() {
-    if (!jobName.trim()) return;
-    if (!selectedTemplate && templates.length > 0) return;
+    if (templates.length > 0 && !selectedTemplate) return;
 
     try {
       const { db } = await import('$lib/db/api');
 
+      const pageSize = $settings.default_page_size || 'A4';
+      const orientation = $settings.default_page_orientation || 'portrait';
+      const dims = PAGE_SIZES[pageSize] || PAGE_SIZES['A4'];
+      const effectiveWidth = orientation === 'landscape' ? dims.height : dims.width;
+      const effectiveHeight = orientation === 'landscape' ? dims.width : dims.height;
+
       const fields = selectedTemplate ? [...selectedTemplate.fields] : [];
-      const labelW = selectedTemplate ? selectedTemplate.label_width_mm : 80;
-      const labelH = selectedTemplate ? selectedTemplate.label_height_mm : 50;
-      const logoEnabled = selectedTemplate ? selectedTemplate.logo_enabled : false;
 
       const job = await db.createJob({
-        name: jobName.trim(),
+        name: jobName.trim() || 'Untitled Job',
+        client_name: clientName.trim(),
+        notes: '',
         source_template_id: selectedTemplateId || 0,
         fields,
-        label_width_mm: labelW,
-        label_height_mm: labelH,
-        logo_enabled: logoEnabled,
+        job_field_values: {},
+        sizing_mode: selectedTemplate?.sizing_mode || 'grid',
+        columns: selectedTemplate?.columns || 2,
+        rows: selectedTemplate?.rows || 5,
+        label_width_mm: selectedTemplate?.label_width_mm || 80,
+        label_height_mm: selectedTemplate?.label_height_mm || 50,
+        logo_enabled: selectedTemplate?.logo_enabled || false,
+        phone_enabled: selectedTemplate?.phone_enabled || false,
         page_size: pageSize,
         page_width_mm: effectiveWidth,
         page_height_mm: effectiveHeight,
@@ -67,21 +83,28 @@
       await db.createLabel({
         job_id: job.id,
         field_values: fieldValues,
-        shape_preset: null,
-        shape_segments: [],
+        shape_preset: 'straight',
+        shape_segments: [{ length: 200, angle: 0 }],
         copies: 1,
         sort_order: 0,
       });
 
       showNewJobModal.set(false);
       onCreated(job);
+      addToast('Job created', 'success');
     } catch (e) {
       console.error('Failed to create job:', e);
+      addToast('Failed to create job', 'error');
     }
   }
 
   function handleCancel() {
     showNewJobModal.set(false);
+  }
+
+  function goToTemplates() {
+    showNewJobModal.set(false);
+    currentScreen.set('templates');
   }
 </script>
 
@@ -92,9 +115,29 @@
     <div class="modal">
       <h3>New Job</h3>
 
+      <!-- Auto-generated name, click to edit -->
+      <div class="name-row">
+        {#if editingName}
+          <input
+            type="text"
+            class="name-input"
+            bind:value={jobName}
+            on:blur={() => (editingName = false)}
+            on:keydown={(e) => e.key === 'Enter' && (editingName = false)}
+            autofocus
+          />
+        {:else}
+          <button class="name-display" on:click={() => (editingName = true)}>
+            <span class="name-text">{jobName}</span>
+            <Icon name="edit" size={13} />
+          </button>
+        {/if}
+      </div>
+
+      <!-- Client name -->
       <div class="form-group">
-        <label>Job Name</label>
-        <input type="text" bind:value={jobName} placeholder="e.g. Bridge Project Batch 3" autofocus />
+        <label>Client Name (optional)</label>
+        <input type="text" bind:value={clientName} placeholder="e.g. ABC Construction" />
       </div>
 
       {#if templates.length > 0}
@@ -102,57 +145,25 @@
           <label>Template</label>
           <select bind:value={selectedTemplateId}>
             {#each templates as t}
-              <option value={t.id}>{t.name} ({t.label_width_mm}×{t.label_height_mm}mm, {t.fields.length} fields)</option>
+              <option value={t.id}>{t.name} ({t.sizing_mode === 'grid' ? `${t.columns}×${t.rows} grid` : `${t.label_width_mm}×${t.label_height_mm}mm`}, {t.fields.length} fields)</option>
             {/each}
           </select>
         </div>
+
+        <div class="form-actions">
+          <Button variant="primary" on:click={handleCreate}>Create Job</Button>
+          <Button variant="ghost" on:click={handleCancel}>Cancel</Button>
+        </div>
       {:else}
-        <p class="hint">No templates yet. Job will start with no fields. Create a template first for better results.</p>
-      {/if}
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Page Size</label>
-          <select bind:value={pageSize}>
-            <option value="A4">A4</option>
-            <option value="A3">A3</option>
-            <option value="Letter">Letter</option>
-            <option value="custom">Custom</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Orientation</label>
-          <select bind:value={orientation}>
-            <option value="portrait">Portrait</option>
-            <option value="landscape">Landscape</option>
-          </select>
-        </div>
-      </div>
-
-      {#if pageSize === 'custom'}
-        <div class="form-row">
-          <div class="form-group">
-            <label>Width (mm)</label>
-            <input type="number" bind:value={customWidth} min="50" max="1000" />
-          </div>
-          <div class="form-group">
-            <label>Height (mm)</label>
-            <input type="number" bind:value={customHeight} min="50" max="1000" />
-          </div>
+        <div class="empty-templates">
+          <p class="hint">You need a template to define label fields and dimensions.</p>
+          <Button variant="primary" on:click={goToTemplates}>
+            <Icon name="plus" size={14} />
+            Create a Template
+          </Button>
+          <Button variant="ghost" on:click={handleCancel}>Cancel</Button>
         </div>
       {/if}
-
-      <div class="page-summary">
-        Page: {effectiveWidth} × {effectiveHeight} mm
-        {#if selectedTemplate}
-          · Labels: {selectedTemplate.label_width_mm} × {selectedTemplate.label_height_mm} mm
-        {/if}
-      </div>
-
-      <div class="form-actions">
-        <button class="btn btn-create" on:click={handleCreate} disabled={!jobName.trim()}>Create Job</button>
-        <button class="btn btn-cancel" on:click={handleCancel}>Cancel</button>
-      </div>
     </div>
   </div>
 {/if}
@@ -165,92 +176,106 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 300;
+    z-index: var(--z-modal);
   }
   .modal {
     background: var(--color-surface);
-    border-radius: 12px;
-    padding: 24px;
-    width: 420px;
+    border-radius: var(--radius-xl);
+    padding: var(--space-5);
+    width: 400px;
     max-width: 90vw;
     box-shadow: var(--shadow-lg);
   }
   h3 {
-    margin: 0 0 16px;
-    font-size: 18px;
+    margin: 0 0 var(--space-4);
+    font-size: var(--text-xl);
+    font-weight: 600;
     color: var(--color-text);
   }
+
+  /* Name row */
+  .name-row {
+    margin-bottom: var(--space-4);
+  }
+  .name-display {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-surface-alt);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    font-size: var(--text-md);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color var(--transition-fast);
+  }
+  .name-display:hover {
+    border-color: var(--color-input-focus);
+  }
+  .name-text {
+    flex: 1;
+  }
+  .name-input {
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-input-focus);
+    border-radius: var(--radius-md);
+    font-size: var(--text-md);
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: 0 0 0 2px var(--color-input-focus-ring);
+    box-sizing: border-box;
+  }
+
+  /* Form */
   .form-group {
-    margin-bottom: 12px;
+    margin-bottom: var(--space-4);
   }
   .form-group label {
     display: block;
-    font-size: 12px;
+    font-size: var(--text-sm);
     font-weight: 500;
     color: var(--color-text-muted);
-    margin-bottom: 4px;
+    margin-bottom: var(--space-1);
   }
-  .form-group input,
-  .form-group select {
+  .form-group select,
+  .form-group input[type="text"] {
     width: 100%;
-    padding: 8px 10px;
+    padding: var(--space-2) var(--space-3);
     border: 1px solid var(--color-input-border);
-    border-radius: 6px;
-    font-size: 14px;
-    box-sizing: border-box;
+    border-radius: var(--radius-md);
+    font-size: var(--text-md);
     background: var(--color-surface);
     color: var(--color-text);
+    box-sizing: border-box;
   }
-  .form-row {
-    display: flex;
-    gap: 12px;
-  }
-  .form-row .form-group {
-    flex: 1;
-  }
-  .hint {
-    font-size: 12px;
-    color: var(--color-warning);
-    background: var(--color-warning-bg);
-    padding: 8px 12px;
-    border-radius: 6px;
-    margin-bottom: 12px;
-  }
-  .page-summary {
-    font-size: 12px;
-    color: var(--color-text-muted);
-    padding: 8px 0;
+  .form-group input[type="text"]:focus {
+    outline: none;
+    border-color: var(--color-input-focus);
+    box-shadow: 0 0 0 2px var(--color-input-focus-ring);
   }
   .form-actions {
     display: flex;
-    gap: 8px;
-    margin-top: 16px;
+    gap: var(--space-2);
     justify-content: flex-end;
+    margin-top: var(--space-4);
   }
-  .btn {
-    padding: 8px 20px;
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
+
+  /* Empty templates state */
+  .empty-templates {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
   }
-  .btn-create {
-    background: var(--color-primary);
-    color: var(--color-text-inverse);
-  }
-  .btn-create:hover:not(:disabled) {
-    background: var(--color-primary-hover);
-  }
-  .btn-create:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-  .btn-cancel {
-    background: var(--color-surface-alt);
-    color: var(--color-text-secondary);
-  }
-  .btn-cancel:hover {
-    background: var(--color-border);
+  .hint {
+    font-size: var(--text-sm);
+    color: var(--color-text-faint);
+    text-align: center;
+    line-height: 1.4;
   }
 </style>

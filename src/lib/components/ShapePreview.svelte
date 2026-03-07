@@ -16,16 +16,20 @@
       d={renderData.pathD}
       fill="none"
       style="stroke: var(--color-shape-stroke)"
-      stroke-width={Math.max(renderData.bounds.maxX - renderData.bounds.minX, renderData.bounds.maxY - renderData.bounds.minY) * 0.02}
+      stroke-width={Math.max(3, Math.max(renderData.bounds.maxX - renderData.bounds.minX, renderData.bounds.maxY - renderData.bounds.minY) * 0.02)}
       stroke-linecap="round"
       stroke-linejoin="round"
     />
     {#each renderData.segmentMidpoints as mp}
+      {@const boundsSpan = Math.max(renderData.bounds.maxX - renderData.bounds.minX, renderData.bounds.maxY - renderData.bounds.minY)}
+      {@const perpRad = ((mp.angle - 90) * Math.PI) / 180}
+      {@const offsetDist = boundsSpan * 0.08}
       <text
-        x={mp.x}
-        y={mp.y - (renderData.bounds.maxY - renderData.bounds.minY) * 0.05}
+        x={mp.x + Math.cos(perpRad) * offsetDist}
+        y={mp.y + Math.sin(perpRad) * offsetDist}
         text-anchor="middle"
-        font-size={Math.max(renderData.bounds.maxX - renderData.bounds.minX, renderData.bounds.maxY - renderData.bounds.minY) * 0.07}
+        dominant-baseline="middle"
+        font-size={boundsSpan * 0.07}
         style="fill: var(--color-shape-label)"
         font-family="Inter, sans-serif"
       >{mp.length}</text>

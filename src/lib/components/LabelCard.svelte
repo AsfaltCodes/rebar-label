@@ -5,18 +5,82 @@
 
   export let label: Label;
   export let fields: FieldDef[];
+  export let jobFieldValues: Record<string, string> = {};
   export let widthMm: number;
   export let heightMm: number;
   export let selected: boolean = false;
   export let logoSrc: string | null = null;
   export let logoEnabled: boolean = false;
+  export let phoneEnabled: boolean = false;
+  export let companyPhone: string = '';
   export let scale: number = 1; // mm to px
+  export let labelNumber: number | null = null;
+  export let clientName: string = '';
 
   $: pxW = widthMm * scale;
   $: pxH = heightMm * scale;
   $: hasShape = label.shape_segments && label.shape_segments.length > 0;
   $: shapeData = hasShape ? renderSegments(label.shape_segments) : null;
   $: shapeViewBox = shapeData ? boundsToViewBox(shapeData.bounds) : '';
+
+  // Scale-based font size instead of viewport-based
+  $: baseFontPx = Math.max(5, Math.min(12, heightMm * scale * 0.04));
+
+  // Adaptive zone flex values based on active zones
+  $: showLogo = logoEnabled && logoSrc;
+  $: showPhone = phoneEnabled && companyPhone;
+  $: logoFlex = showLogo ? (hasShape ? 12 : 15) + (showPhone ? 4 : 0) : (showPhone ? 6 : 0);
+  $: shapeFlex = hasShape ? (showLogo ? 38 : 40) : 0;
+  $: fieldsFlex = 100 - logoFlex - shapeFlex;
+
+  // Total length from shape segments
+  $: totalLength = hasShape
+    ? label.shape_segments.reduce((sum: number, s: Segment) => sum + (s.length || 0), 0)
+    : 0;
+
+  // Build rows: pair consecutive half-width fields together
+  type FieldRow = { type: 'full'; field: FieldDef } | { type: 'pair'; left: FieldDef; right: FieldDef } | { type: 'half-single'; field: FieldDef };
+
+  $: fieldRows = buildFieldRows(fields);
+
+  function buildFieldRows(fields: FieldDef[]): FieldRow[] {
+    const rows: FieldRow[] = [];
+    let i = 0;
+    while (i < fields.length) {
+      const f = fields[i];
+      if (f.layout === 'half') {
+        // Look for a partner
+        if (i + 1 < fields.length && fields[i + 1].layout === 'half') {
+          rows.push({ type: 'pair', left: f, right: fields[i + 1] });
+          i += 2;
+        } else {
+          rows.push({ type: 'half-single', field: f });
+          i++;
+        }
+      } else {
+        rows.push({ type: 'full', field: f });
+        i++;
+      }
+    }
+    return rows;
+  }
+
+  // Merge job-scoped, label-scoped, and computed values — Svelte tracks all dependencies
+  $: computedValues = buildComputedValues(fields, totalLength, clientName);
+  $: values = { ...(jobFieldValues || {}), ...(label.field_values || {}), ...computedValues };
+
+  function buildComputedValues(fields: FieldDef[], totalLen: number, client: string): Record<string, string> {
+    const computed: Record<string, string> = {};
+    for (const f of fields) {
+      if (f.source === 'total_length' && totalLen > 0) {
+        computed[f.label] = `${totalLen} mm`;
+      }
+      if (f.source === 'client_name' && client) {
+        computed[f.label] = client;
+      }
+    }
+    return computed;
+  }
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -28,42 +92,67 @@
   on:click
   on:contextmenu
 >
-  {#if logoEnabled && logoSrc}
-    <div class="logo-zone">
-      <img src={logoSrc} alt="Logo" class="logo-img" />
+  {#if showLogo || showPhone}
+    <div class="logo-zone" style="flex:{logoFlex}">
+      {#if showLogo}
+        <img src={logoSrc} alt="Logo" class="logo-img" />
+      {/if}
+      {#if showPhone}
+        <span class="phone-text" style="font-size:{Math.max(4, baseFontPx * 0.75)}px">{companyPhone}</span>
+      {/if}
     </div>
   {/if}
 
-  <div class="fields-zone">
-    <table class="fields-table">
-      {#each fields as field}
-        <tr>
-          <td class="field-label">{field.label}:</td>
-          <td class="field-value" class:bold={field.bold}>
-            {label.field_values[field.label] || ''}
-          </td>
-        </tr>
-      {/each}
-    </table>
+  <div class="fields-zone" style="flex:{fieldsFlex}; font-size:{baseFontPx}px">
+    {#each fieldRows as row}
+      {#if row.type === 'full' || row.type === 'half-single'}
+        {@const field = row.field}
+        <div class="field-row">
+          <span class="field-name">{field.label}</span>
+          <span class="field-fill" class:bold={field.bold}>{values[field.label] || ''}<span class="field-line"></span></span>
+        </div>
+      {:else}
+        <div class="field-row pair">
+          <span class="field-half">
+            <span class="field-name">{row.left.label}</span>
+            <span class="field-fill" class:bold={row.left.bold}>{values[row.left.label] || ''}<span class="field-line"></span></span>
+          </span>
+          <span class="field-half">
+            <span class="field-name">{row.right.label}</span>
+            <span class="field-fill" class:bold={row.right.bold}>{values[row.right.label] || ''}<span class="field-line"></span></span>
+          </span>
+        </div>
+      {/if}
+    {/each}
+    {#if totalLength > 0}
+      <div class="field-row total-row">
+        <span class="field-name">Total</span>
+        <span class="field-fill bold">{totalLength} mm<span class="field-line"></span></span>
+      </div>
+    {/if}
   </div>
 
   {#if hasShape && shapeData}
-    <div class="shape-zone">
+    {@const boundsSpan = Math.max(shapeData.bounds.maxX - shapeData.bounds.minX, shapeData.bounds.maxY - shapeData.bounds.minY)}
+    <div class="shape-zone" style="flex:{shapeFlex}">
       <svg width="100%" height="100%" viewBox={shapeViewBox} preserveAspectRatio="xMidYMid meet">
         <path
           d={shapeData.pathD}
           fill="none"
           style="stroke: var(--color-shape-stroke)"
-          stroke-width={Math.max(shapeData.bounds.maxX - shapeData.bounds.minX, shapeData.bounds.maxY - shapeData.bounds.minY) * 0.025}
+          stroke-width={Math.max(3, boundsSpan * 0.025)}
           stroke-linecap="round"
           stroke-linejoin="round"
         />
         {#each shapeData.segmentMidpoints as mp}
+          {@const perpRad = ((mp.angle - 90) * Math.PI) / 180}
+          {@const offsetDist = boundsSpan * 0.08}
           <text
-            x={mp.x}
-            y={mp.y - (shapeData.bounds.maxY - shapeData.bounds.minY) * 0.06}
+            x={mp.x + Math.cos(perpRad) * offsetDist}
+            y={mp.y + Math.sin(perpRad) * offsetDist}
             text-anchor="middle"
-            font-size={Math.max(shapeData.bounds.maxX - shapeData.bounds.minX, shapeData.bounds.maxY - shapeData.bounds.minY) * 0.08}
+            dominant-baseline="middle"
+            font-size={Math.max(8, boundsSpan * 0.08)}
             style="fill: var(--color-shape-label)"
             font-family="Inter, sans-serif"
           >{mp.length}</text>
@@ -71,10 +160,15 @@
       </svg>
     </div>
   {/if}
+
+  {#if labelNumber !== null}
+    <div class="label-counter" style="font-size:{Math.max(4, baseFontPx * 0.7)}px">{labelNumber}</div>
+  {/if}
 </div>
 
 <style>
   .label-card {
+    position: relative;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 2px;
@@ -96,47 +190,92 @@
     padding: 2px;
     text-align: center;
     border-bottom: 1px solid var(--color-border-light);
-    flex-shrink: 0;
-    max-height: 20%;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 1px;
+    overflow: hidden;
+    min-height: 0;
   }
   .logo-img {
     max-height: 100%;
     max-width: 80%;
     object-fit: contain;
   }
+  .phone-text {
+    color: var(--color-text-muted);
+    text-align: center;
+    line-height: 1;
+    white-space: nowrap;
+  }
   .fields-zone {
     flex: 1;
     padding: 2px 3px;
     overflow: hidden;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
   }
-  .fields-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: clamp(5px, 1.2vw, 10px);
-    line-height: 1.3;
+  .field-row {
+    display: flex;
+    align-items: baseline;
+    line-height: 1.4;
   }
-  .field-label {
-    color: var(--color-text-muted);
-    white-space: nowrap;
-    padding-right: 3px;
-    vertical-align: top;
-    width: 40%;
+  .field-row.pair {
+    gap: 4px;
   }
-  .field-value {
+  .field-half {
+    flex: 1;
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+  }
+  .field-name {
+    font-weight: 700;
     color: var(--color-text);
-    word-break: break-word;
+    white-space: nowrap;
+    margin-right: 2px;
   }
-  .field-value.bold {
+  .field-fill {
+    flex: 1;
+    position: relative;
+    color: var(--color-text);
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .field-fill.bold {
     font-weight: 600;
   }
+  .field-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-bottom: 1px solid var(--color-text);
+  }
+  .total-row {
+    border-top: 1px solid var(--color-border-light);
+    padding-top: 1px;
+  }
   .shape-zone {
-    flex-shrink: 0;
-    height: 35%;
     border-top: 1px solid var(--color-border-light);
     padding: 2px;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .label-counter {
+    position: absolute;
+    bottom: 1px;
+    right: 3px;
+    color: var(--color-text-faint);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    opacity: 0.6;
   }
 </style>

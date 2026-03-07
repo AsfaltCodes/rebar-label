@@ -13,7 +13,7 @@
 </script>
 
 <div class="field-input" class:bold={field.bold}>
-  <label class="field-label">{field.label}:</label>
+  <label class="field-label" title={field.label}>{field.label}:</label>
   <input
     type={field.field_type === 'number' ? 'number' : 'text'}
     class="field-value"

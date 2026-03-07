@@ -1,16 +1,59 @@
 <script lang="ts">
-  import { currentJob, selectedLabel, selectedLabelId, labels, createNewLabel, deleteLabel, updateSelectedLabel } from '$lib/stores/jobStore';
+  import { currentJob, selectedLabel, updateSelectedLabel, updateJob } from '$lib/stores/jobStore';
+  import { saveStatus } from '$lib/stores/saveStatusStore';
+  import { settings } from '$lib/stores/settingsStore';
   import type { Segment } from '$lib/shapes/presets';
+  import type { FieldDef } from '$lib/db/types';
   import FieldInput from './FieldInput.svelte';
   import ShapeEditor from './ShapeEditor.svelte';
+  import Icon from './ui/Icon.svelte';
 
   $: job = $currentJob;
   $: label = $selectedLabel;
+  $: s = $settings;
+  $: logoSrc = s.logo_image_path || null;
+  $: totalLength = label?.shape_segments?.length
+    ? label.shape_segments.reduce((sum: number, s: any) => sum + (s.length || 0), 0)
+    : 0;
 
-  function handleFieldChange(fieldLabel: string, value: string) {
-    if (!label) return;
-    const newValues = { ...label.field_values, [fieldLabel]: value };
-    updateSelectedLabel({ field_values: newValues });
+  function isJobScoped(field: FieldDef): boolean {
+    return field.scope === 'job';
+  }
+
+  function isComputed(field: FieldDef): boolean {
+    return field.source === 'total_length' || field.source === 'client_name';
+  }
+
+  // Reactive lookup — Svelte tracks job, label, and totalLength dependencies
+  $: fieldValues = buildFieldValues(job, label, totalLength);
+
+  function buildFieldValues(job: any, label: any, totalLen: number): Record<string, string> {
+    const vals: Record<string, string> = {};
+    if (!job) return vals;
+    for (const f of job.fields) {
+      if (f.source === 'total_length') {
+        vals[f.label] = totalLen > 0 ? `${totalLen} mm` : '—';
+      } else if (f.source === 'client_name') {
+        vals[f.label] = job.client_name || '—';
+      } else if (f.scope === 'job') {
+        vals[f.label] = job?.job_field_values?.[f.label] || '';
+      } else {
+        vals[f.label] = label?.field_values?.[f.label] || '';
+      }
+    }
+    return vals;
+  }
+
+  function handleFieldChange(field: FieldDef, value: string) {
+    if (isJobScoped(field)) {
+      if (!job) return;
+      const newValues = { ...(job.job_field_values || {}), [field.label]: value };
+      updateJob({ job_field_values: newValues });
+    } else {
+      if (!label) return;
+      const newValues = { ...label.field_values, [field.label]: value };
+      updateSelectedLabel({ field_values: newValues });
+    }
   }
 
   function handleShapeChange(preset: string | null, segs: Segment[]) {
@@ -21,29 +64,52 @@
     const val = parseInt((e.target as HTMLInputElement).value) || 1;
     updateSelectedLabel({ copies: Math.max(1, val) });
   }
-
-  async function handleNewLabel() {
-    await createNewLabel();
-  }
-
-  async function handleDelete() {
-    if (label) {
-      await deleteLabel(label.id);
-    }
-  }
 </script>
 
 <div class="label-editor">
   {#if job && label}
+    <div class="editor-header">
+      <span class="editor-title">Label #{label.sort_order + 1}</span>
+      <span class="save-indicator" class:visible={$saveStatus !== 'idle'}>
+        {#if $saveStatus === 'saving'}
+          Saving...
+        {:else if $saveStatus === 'saved'}
+          <Icon name="check" size={12} /> Saved
+        {:else if $saveStatus === 'error'}
+          Save failed
+        {/if}
+      </span>
+    </div>
+
+    {#if job.logo_enabled && !logoSrc}
+      <div class="warning-hint">Logo enabled but not uploaded — set in Settings.</div>
+    {/if}
+    {#if job.phone_enabled && !s.company_phone}
+      <div class="warning-hint">Phone enabled but not set — configure in Settings.</div>
+    {/if}
+
     <div class="section">
       <div class="section-header">Fields</div>
       <div class="fields-list">
         {#each job.fields as field}
-          <FieldInput
-            {field}
-            value={label.field_values[field.label] || ''}
-            onChange={(v) => handleFieldChange(field.label, v)}
-          />
+          <div class="field-wrapper" class:shared={isJobScoped(field)} class:computed={isComputed(field)}>
+            {#if isComputed(field)}
+              <div class="computed-field">
+                <span class="computed-label">{field.label}</span>
+                <span class="computed-value">{fieldValues[field.label] || '—'}</span>
+              </div>
+              <span class="computed-badge" title="Auto-calculated from shape segments">auto</span>
+            {:else}
+              <FieldInput
+                {field}
+                value={fieldValues[field.label] || ''}
+                onChange={(v) => handleFieldChange(field, v)}
+              />
+              {#if isJobScoped(field)}
+                <span class="shared-badge" title="Shared across all labels in this job">shared</span>
+              {/if}
+            {/if}
+          </div>
         {/each}
       </div>
     </div>
@@ -54,6 +120,11 @@
         segments={label.shape_segments}
         onChange={handleShapeChange}
       />
+      {#if totalLength > 0}
+        <div class="total-length">
+          Total Length: <strong>{totalLength} mm</strong>
+        </div>
+      {/if}
     </div>
 
     <div class="section copies-section">
@@ -71,113 +142,168 @@
     </div>
   {:else if job}
     <div class="empty-state">
-      <p>No label selected.</p>
-      <p>Click <strong>+ New Label</strong> to create one.</p>
+      <p>No label selected</p>
+      <p class="empty-hint">Select a label from the list or create a new one</p>
     </div>
   {:else}
     <div class="empty-state">
-      <p>No job open.</p>
-      <p>Create or open a job to start editing labels.</p>
+      <p>No job open</p>
+      <p class="empty-hint">Create or open a job to start editing</p>
     </div>
   {/if}
-
-  <div class="actions">
-    <button class="btn btn-add" on:click={handleNewLabel} disabled={!job}>
-      + New Label
-    </button>
-    <button class="btn btn-delete" on:click={handleDelete} disabled={!label}>
-      Delete
-    </button>
-  </div>
 </div>
 
 <style>
   .label-editor {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 12px;
+    gap: var(--space-3);
+    padding: var(--space-3);
     height: 100%;
     overflow-y: auto;
+  }
+  .editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .editor-title {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .save-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--text-xs);
+    color: var(--color-text-faint);
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+  }
+  .save-indicator.visible {
+    opacity: 1;
   }
   .section {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-2);
   }
   .section-header {
     font-weight: 600;
-    font-size: 13px;
+    font-size: var(--text-base);
     color: var(--color-text);
-    padding-bottom: 4px;
+    padding-bottom: var(--space-1);
     border-bottom: 1px solid var(--color-border);
   }
   .fields-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-2);
+  }
+  .field-wrapper {
+    position: relative;
+  }
+  .field-wrapper.shared {
+    border-left: 2px solid var(--color-primary);
+    padding-left: var(--space-2);
+    border-radius: 2px;
+  }
+  .shared-badge {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 9px;
+    color: var(--color-primary);
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  .field-wrapper.computed {
+    border-left: 2px solid var(--color-text-faint);
+    padding-left: var(--space-2);
+    border-radius: 2px;
+  }
+  .computed-field {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) 0;
+  }
+  .computed-label {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+  }
+  .computed-value {
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+  .computed-badge {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 9px;
+    color: var(--color-text-faint);
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
   }
   .copies-section {
-    padding-top: 4px;
+    padding-top: var(--space-1);
   }
   .copies-label {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
+    gap: var(--space-2);
+    font-size: var(--text-base);
     font-weight: 500;
     color: var(--color-text-secondary);
   }
   .copies-input {
     width: 60px;
-    padding: 4px 8px;
+    padding: var(--space-1) var(--space-2);
     border: 1px solid var(--color-input-border);
-    border-radius: 4px;
-    font-size: 13px;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-base);
     text-align: center;
+    background: var(--color-surface);
+    color: var(--color-text);
   }
-  .actions {
-    display: flex;
-    gap: 8px;
-    margin-top: auto;
-    padding-top: 12px;
-    border-top: 1px solid var(--color-border);
+  .copies-input:focus {
+    outline: none;
+    border-color: var(--color-input-focus);
+    box-shadow: 0 0 0 2px var(--color-input-focus-ring);
   }
-  .btn {
-    flex: 1;
-    padding: 8px 12px;
-    border: none;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-  .btn-add {
-    background: var(--color-primary);
-    color: var(--color-text-inverse);
-  }
-  .btn-add:hover:not(:disabled) {
-    background: var(--color-primary-hover);
-  }
-  .btn-delete {
-    background: var(--color-danger-bg);
-    color: var(--color-danger);
-  }
-  .btn-delete:hover:not(:disabled) {
-    background: var(--color-danger-border);
+  .warning-hint {
+    font-size: var(--text-xs);
+    color: var(--color-warning, #e0a030);
+    background: rgba(255, 170, 0, 0.08);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    border-left: 2px solid var(--color-warning, #e0a030);
+    line-height: 1.4;
   }
   .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
-    padding: 32px 16px;
+    padding: var(--space-7) var(--space-4);
     color: var(--color-text-faint);
-    font-size: 13px;
+    font-size: var(--text-md);
+    flex: 1;
   }
-  .empty-state p {
-    margin: 4px 0;
+  .empty-hint {
+    font-size: var(--text-sm);
+    margin-top: var(--space-1);
   }
 </style>

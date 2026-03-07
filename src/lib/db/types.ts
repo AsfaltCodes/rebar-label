@@ -4,14 +4,21 @@ export interface FieldDef {
   default_value: string;
   font_size: number; // 1=small(8pt), 2=medium(10pt), 3=large(12pt)
   bold: boolean;
+  layout?: 'full' | 'half'; // 'full' = one per row (default), 'half' = two per row
+  scope?: 'job' | 'label'; // 'job' = shared across all labels, 'label' = per-label (default)
+  source?: 'manual' | 'total_length' | 'client_name'; // 'manual' = user types, 'total_length' = auto from shape, 'client_name' = auto from job
 }
 
 export interface Template {
   id: number;
   name: string;
+  sizing_mode: 'grid' | 'fixed';
+  columns: number;
+  rows: number;
   label_width_mm: number;
   label_height_mm: number;
   logo_enabled: boolean;
+  phone_enabled: boolean;
   fields: FieldDef[];
   created_at: string;
   updated_at: string;
@@ -20,11 +27,18 @@ export interface Template {
 export interface Job {
   id: number;
   name: string;
+  client_name: string;
+  notes: string;
   source_template_id: number;
   fields: FieldDef[];
+  job_field_values: Record<string, string>; // values for scope:'job' fields
+  sizing_mode: 'grid' | 'fixed';
+  columns: number;
+  rows: number;
   label_width_mm: number;
   label_height_mm: number;
   logo_enabled: boolean;
+  phone_enabled: boolean;
   page_size: string;
   page_width_mm: number;
   page_height_mm: number;
@@ -51,8 +65,9 @@ export interface Label {
 export interface AppSettings {
   logo_image_path: string;
   default_page_size: string;
-  default_template_id: string;
+  default_page_orientation: 'portrait' | 'landscape';
   company_name: string;
+  company_phone: string;
   margin_top_mm: number;
   margin_bottom_mm: number;
   margin_left_mm: number;
@@ -69,11 +84,12 @@ export const PAGE_SIZES: Record<string, { width: number; height: number }> = {
 export const DEFAULT_SETTINGS: AppSettings = {
   logo_image_path: '',
   default_page_size: 'A4',
-  default_template_id: '',
+  default_page_orientation: 'portrait',
   company_name: '',
-  margin_top_mm: 10,
-  margin_bottom_mm: 10,
-  margin_left_mm: 10,
-  margin_right_mm: 10,
-  label_gap_mm: 2,
+  company_phone: '',
+  margin_top_mm: 0,
+  margin_bottom_mm: 0,
+  margin_left_mm: 0,
+  margin_right_mm: 0,
+  label_gap_mm: 0,
 };

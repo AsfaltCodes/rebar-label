@@ -31,6 +31,7 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
   let y = 0;
 
   for (const seg of segments) {
+    currentAngle += seg.angle;
     const rad = (currentAngle * Math.PI) / 180;
     const dx = Math.cos(rad) * seg.length;
     const dy = Math.sin(rad) * seg.length;
@@ -42,8 +43,6 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
     x += dx;
     y += dy;
     points.push({ x, y });
-
-    currentAngle += seg.angle;
   }
 
   // Check if closed
@@ -62,10 +61,12 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
     pathD += ' Z';
   }
 
-  // Calculate bounds with padding
+  // Calculate bounds with padding (proportional to shape span, not segment length)
   const allX = points.map(p => p.x);
   const allY = points.map(p => p.y);
-  const padding = maxLen * 0.15;
+  const boundsW = Math.max(...allX) - Math.min(...allX);
+  const boundsH = Math.max(...allY) - Math.min(...allY);
+  const padding = Math.max(boundsW, boundsH, 1) * 0.12;
   const bounds = {
     minX: Math.min(...allX) - padding,
     minY: Math.min(...allY) - padding,

@@ -3,6 +3,7 @@
   import { settings } from '$lib/stores/settingsStore';
   import { currentPage } from '$lib/stores/uiStore';
   import { calculateLayout } from '$lib/layout/engine';
+  import { calculateLabelDimensions } from '$lib/utils/labelDimensions';
   import { PAGE_SIZES } from '$lib/db/types';
   import LabelCard from './LabelCard.svelte';
 
@@ -14,8 +15,13 @@
   // Calculate page dimensions
   $: pageW = job ? job.page_width_mm : 210;
   $: pageH = job ? job.page_height_mm : 297;
-  $: labelW = job ? job.label_width_mm : 80;
-  $: labelH = job ? job.label_height_mm : 50;
+
+  // Grid mode: derive label dimensions from columns × rows
+  $: gridDims = job?.sizing_mode === 'grid'
+    ? calculateLabelDimensions(pageW, pageH, s.margin_top_mm, s.margin_bottom_mm, s.margin_left_mm, s.margin_right_mm, s.label_gap_mm, job.columns, job.rows)
+    : null;
+  $: labelW = gridDims ? gridDims.width : (job ? job.label_width_mm : 80);
+  $: labelH = gridDims ? gridDims.height : (job ? job.label_height_mm : 50);
 
   $: layout = job
     ? calculateLayout(
@@ -28,10 +34,9 @@
       )
     : null;
 
-  // Scale page to fit container
-  let containerEl: HTMLDivElement;
-  let containerWidth = 600;
-  let containerHeight = 500;
+  // Scale page to fit container — use bind: for reactive measurement
+  let containerWidth = 0;
+  let containerHeight = 0;
 
   $: scale = layout
     ? Math.min(
@@ -46,13 +51,6 @@
     ? layout.positions.filter(p => p.page === page)
     : [];
 
-  function handleResize() {
-    if (containerEl) {
-      containerWidth = containerEl.clientWidth;
-      containerHeight = containerEl.clientHeight;
-    }
-  }
-
   function selectLabel(labelIndex: number) {
     if (allLabels[labelIndex]) {
       selectedLabelId.set(allLabels[labelIndex].id);
@@ -61,9 +59,9 @@
 
   function handleContextMenu(e: MouseEvent, labelIndex: number) {
     e.preventDefault();
-    if (allLabels[labelIndex] && confirm('Delete this label?')) {
-      deleteLabel(allLabels[labelIndex].id);
-    }
+    // Context menu delete is now handled by LabelList's ConfirmDialog
+    // Just select the label on right-click
+    selectLabel(labelIndex);
   }
 
   function prevPage() {
@@ -78,10 +76,8 @@
   $: logoSrc = s.logo_image_path || null;
 </script>
 
-<svelte:window on:resize={handleResize} />
-
-<div class="page-preview" bind:this={containerEl}>
-  {#if job && layout}
+<div class="page-preview" bind:clientWidth={containerWidth} bind:clientHeight={containerHeight}>
+  {#if job && layout && containerWidth > 0}
     <div class="page-container">
       <div
         class="page"
@@ -97,25 +93,31 @@
               <LabelCard
                 {label}
                 fields={job.fields}
+                jobFieldValues={job.job_field_values || {}}
                 widthMm={labelW}
                 heightMm={labelH}
                 {scale}
                 selected={label.id === $selectedLabelId}
                 {logoSrc}
                 logoEnabled={job.logo_enabled}
+                phoneEnabled={job.phone_enabled}
+                companyPhone={s.company_phone}
+                labelNumber={pos.globalIndex + 1}
+                clientName={job.client_name || ''}
                 on:click={() => selectLabel(pos.labelIndex)}
                 on:contextmenu={(e) => handleContextMenu(e, pos.labelIndex)}
               />
             </div>
           {/if}
         {/each}
+
       </div>
     </div>
 
     <div class="page-controls">
-      <button class="page-btn" on:click={prevPage} disabled={page === 0}>&larr;</button>
+      <button class="page-btn" on:click={prevPage} disabled={page === 0}>&#8592;</button>
       <span class="page-info">Page {page + 1} of {layout.totalPages}</span>
-      <button class="page-btn" on:click={nextPage} disabled={page >= layout.totalPages - 1}>&rarr;</button>
+      <button class="page-btn" on:click={nextPage} disabled={page >= layout.totalPages - 1}>&#8594;</button>
 
       <div class="page-size-display">
         {job.page_size} &middot; {job.page_orientation}
@@ -153,6 +155,10 @@
   }
   .label-slot {
     position: absolute;
+  }
+  .label-slot.blank {
+    opacity: 0.5;
+    pointer-events: none;
   }
   .page-controls {
     display: flex;

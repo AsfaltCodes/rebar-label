@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import type { Job, Label, FieldDef, AppSettings } from '$lib/db/types';
 import { calculateLayout } from '$lib/layout/engine';
+import { calculateLabelDimensions } from '$lib/utils/labelDimensions';
 import { renderSegments } from '$lib/shapes/renderer';
 
 export function generatePdf(
@@ -11,8 +12,22 @@ export function generatePdf(
 ): jsPDF {
   const pageW = job.page_width_mm;
   const pageH = job.page_height_mm;
-  const labelW = job.label_width_mm;
-  const labelH = job.label_height_mm;
+
+  // Grid mode: derive label dimensions from columns × rows
+  let labelW: number, labelH: number;
+  if (job.sizing_mode === 'grid') {
+    const dims = calculateLabelDimensions(
+      pageW, pageH,
+      settings.margin_top_mm, settings.margin_bottom_mm,
+      settings.margin_left_mm, settings.margin_right_mm,
+      settings.label_gap_mm, job.columns, job.rows
+    );
+    labelW = dims.width;
+    labelH = dims.height;
+  } else {
+    labelW = job.label_width_mm;
+    labelH = job.label_height_mm;
+  }
 
   const layout = calculateLayout(
     pageW, pageH,
@@ -44,8 +59,33 @@ export function generatePdf(
       const label = labels[pos.labelIndex];
       if (!label) continue;
 
-      drawLabel(doc, pos.x, pos.y, labelW, labelH, label, job.fields, job.logo_enabled, logoDataUrl);
+      drawLabel(doc, pos.x, pos.y, labelW, labelH, label, job.fields, job.job_field_values || {}, job.logo_enabled, logoDataUrl, job.phone_enabled, settings.company_phone, pos.globalIndex + 1, job.client_name);
     }
+
+    // Fill remaining slots on this page with blank labels
+    const filledSlots = pagePositions.length;
+    for (let slot = filledSlots; slot < layout.labelsPerPage; slot++) {
+      const col = slot % layout.columns;
+      const row = Math.floor(slot / layout.columns);
+      const blankX = settings.margin_left_mm + col * (labelW + settings.label_gap_mm);
+      const blankY = settings.margin_top_mm + row * (labelH + settings.label_gap_mm);
+      drawBlankLabel(doc, blankX, blankY, labelW, labelH, job.fields, job.logo_enabled, logoDataUrl, job.phone_enabled, settings.company_phone);
+    }
+
+    // Page footer: company name + page number
+    doc.setFontSize(7);
+    doc.setTextColor(160);
+    doc.setFont('Helvetica', 'normal');
+    const footerY = pageH - 3;
+    if (settings.company_name) {
+      doc.text(settings.company_name, settings.margin_left_mm, footerY);
+    }
+    doc.text(
+      `Page ${page + 1} of ${layout.totalPages}`,
+      pageW - settings.margin_right_mm,
+      footerY,
+      { align: 'right' }
+    );
   }
 
   return doc;
@@ -59,9 +99,32 @@ function drawLabel(
   h: number,
   label: Label,
   fields: FieldDef[],
+  jobFieldValues: Record<string, string>,
   logoEnabled: boolean,
-  logoDataUrl: string | null
+  logoDataUrl: string | null,
+  phoneEnabled: boolean = false,
+  companyPhone: string = '',
+  labelNumber?: number,
+  clientName?: string
 ) {
+  // Compute total length from shape segments
+  const totalLength = label.shape_segments?.length
+    ? label.shape_segments.reduce((sum: number, s: any) => sum + (s.length || 0), 0)
+    : 0;
+
+  // Build computed field values (auto-filled from shape data and job metadata)
+  const computedValues: Record<string, string> = {};
+  for (const f of fields) {
+    if (f.source === 'total_length' && totalLength > 0) {
+      computedValues[f.label] = `${totalLength} mm`;
+    }
+    if (f.source === 'client_name' && clientName) {
+      computedValues[f.label] = clientName;
+    }
+  }
+
+  // Merge job-scoped, label-scoped, and computed field values
+  const mergedValues = { ...jobFieldValues, ...label.field_values, ...computedValues };
   // Border
   doc.setDrawColor(150);
   doc.setLineWidth(0.2);
@@ -72,48 +135,100 @@ function drawLabel(
   const rightPad = x + w - 1.5;
   const innerW = w - 3;
 
-  // Zone 1: Logo
+  // Zone 1: Logo + Phone
   if (logoEnabled && logoDataUrl) {
     try {
       const logoH = h * 0.15;
       doc.addImage(logoDataUrl, 'PNG', x + w * 0.2, currentY, w * 0.6, logoH);
-      currentY += logoH + 1;
-      doc.setDrawColor(220);
-      doc.line(x + 1, currentY, x + w - 1, currentY);
-      currentY += 1;
+      currentY += logoH + 0.5;
     } catch (e) {
       // Skip logo if it fails
-      currentY += 1;
     }
   }
 
-  // Zone 2: Fields (2-column table)
+  // Phone number (below logo or at top if no logo)
+  if (phoneEnabled && companyPhone) {
+    doc.setFontSize(5);
+    doc.setTextColor(120);
+    doc.setFont('Helvetica', 'normal');
+    doc.text(companyPhone, x + w / 2, currentY + 2, { align: 'center' });
+    currentY += 3;
+  }
+
+  // Separator after logo/phone zone
+  if ((logoEnabled && logoDataUrl) || (phoneEnabled && companyPhone)) {
+    doc.setDrawColor(220);
+    doc.line(x + 1, currentY, x + w - 1, currentY);
+    currentY += 1;
+  }
+
+  // Zone 2: Fields — inline layout (bold label + underline + value on line)
   doc.setTextColor(0);
   const fieldFontSizeMap: Record<number, number> = { 1: 6, 2: 7, 3: 9 };
-  const midX = x + w * 0.42;
+  const labelGap = 0.5; // gap between label text and underline
 
-  for (const field of fields) {
-    const fontSize = fieldFontSizeMap[field.font_size] || 7;
-    const lineH = fontSize * 0.45;
-
-    if (currentY + lineH > y + h * 0.6) break; // Don't overflow into shape zone
-
-    // Label
-    doc.setFontSize(fontSize);
-    doc.setFont('Helvetica', 'normal');
-    doc.setTextColor(100);
-    doc.text(`${field.label}:`, midX - 0.5, currentY + lineH, { align: 'right' });
-
-    // Value
-    doc.setTextColor(0);
-    if (field.bold) {
-      doc.setFont('Helvetica', 'bold');
+  type FieldRow = { type: 'full'; field: FieldDef } | { type: 'pair'; left: FieldDef; right: FieldDef };
+  const fieldRows: FieldRow[] = [];
+  let fi = 0;
+  while (fi < fields.length) {
+    const f = fields[fi];
+    if (f.layout === 'half' && fi + 1 < fields.length && fields[fi + 1].layout === 'half') {
+      fieldRows.push({ type: 'pair', left: f, right: fields[fi + 1] });
+      fi += 2;
+    } else {
+      fieldRows.push({ type: 'full', field: f });
+      fi++;
     }
-    const val = label.field_values[field.label] || '';
-    doc.text(val, midX + 0.5, currentY + lineH);
-    doc.setFont('Helvetica', 'normal');
+  }
 
-    currentY += lineH + 0.8;
+  function drawInlineField(field: FieldDef, val: string, startX: number, endX: number, drawY: number, fontSize: number) {
+    doc.setFontSize(fontSize);
+
+    // Bold label
+    doc.setFont('Helvetica', 'bold');
+    doc.setTextColor(0);
+    doc.text(field.label, startX, drawY);
+    const labelW = doc.getTextWidth(field.label);
+    const lineStartX = startX + labelW + labelGap;
+
+    // Always draw underline
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.15);
+    doc.line(lineStartX, drawY + 0.3, endX, drawY + 0.3);
+
+    // Value on top of underline
+    if (val) {
+      doc.setFont('Helvetica', field.bold ? 'bold' : 'normal');
+      doc.setTextColor(0);
+      doc.text(val, lineStartX + 0.3, drawY);
+    }
+
+    doc.setFont('Helvetica', 'normal');
+  }
+
+  for (const row of fieldRows) {
+    if (row.type === 'full') {
+      const field = row.field;
+      const fontSize = fieldFontSizeMap[field.font_size] || 7;
+      const lineH = fontSize * 0.45;
+      if (currentY + lineH > y + h * 0.6) break;
+
+      drawInlineField(field, mergedValues[field.label] || '', leftPad, rightPad, currentY + lineH, fontSize);
+      currentY += lineH + 0.8;
+    } else {
+      const leftField = row.left;
+      const rightField = row.right;
+      const fontSize = fieldFontSizeMap[leftField.font_size] || 7;
+      const lineH = fontSize * 0.45;
+      if (currentY + lineH > y + h * 0.6) break;
+
+      const halfEnd = leftPad + innerW / 2 - 1;
+      const rightStart = leftPad + innerW / 2 + 1;
+
+      drawInlineField(leftField, mergedValues[leftField.label] || '', leftPad, halfEnd, currentY + lineH, fontSize);
+      drawInlineField(rightField, mergedValues[rightField.label] || '', rightStart, rightPad, currentY + lineH, fontSize);
+      currentY += lineH + 0.8;
+    }
   }
 
   // Zone 3: Shape
@@ -163,20 +278,138 @@ function drawLabel(
           );
         }
 
-        // Dimension labels
+        // Dimension labels — perpendicular offset from segment
         doc.setFontSize(5);
         doc.setTextColor(120);
         for (const mp of renderData.segmentMidpoints) {
+          const perpRad = ((mp.angle - 90) * Math.PI) / 180;
+          const offsetD = Math.max(boundsW, boundsH) * 0.08;
           doc.text(
             String(mp.length),
-            offsetX + mp.x * shapeSc,
-            offsetY + mp.y * shapeSc - 0.8,
+            offsetX + mp.x * shapeSc + Math.cos(perpRad) * offsetD * shapeSc,
+            offsetY + mp.y * shapeSc + Math.sin(perpRad) * offsetD * shapeSc,
             { align: 'center' }
           );
         }
       }
     }
   }
+
+  // Label counter at bottom-right
+  if (labelNumber !== undefined) {
+    doc.setFontSize(5);
+    doc.setTextColor(180);
+    doc.setFont('Helvetica', 'normal');
+    doc.text(String(labelNumber), x + w - 1.5, y + h - 1, { align: 'right' });
+  }
+}
+
+function drawBlankLabel(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fields: FieldDef[],
+  logoEnabled: boolean,
+  logoDataUrl: string | null,
+  phoneEnabled: boolean = false,
+  companyPhone: string = ''
+) {
+  // Border
+  doc.setDrawColor(150);
+  doc.setLineWidth(0.2);
+  doc.rect(x, y, w, h);
+
+  let currentY = y + 1.5;
+  const leftPad = x + 1.5;
+  const rightPad = x + w - 1.5;
+  const innerW = w - 3;
+
+  // Zone 1: Logo + Phone (same as filled label)
+  if (logoEnabled && logoDataUrl) {
+    try {
+      const logoH = h * 0.15;
+      doc.addImage(logoDataUrl, 'PNG', x + w * 0.2, currentY, w * 0.6, logoH);
+      currentY += logoH + 0.5;
+    } catch (e) {
+      // Skip logo if it fails
+    }
+  }
+
+  if (phoneEnabled && companyPhone) {
+    doc.setFontSize(5);
+    doc.setTextColor(120);
+    doc.setFont('Helvetica', 'normal');
+    doc.text(companyPhone, x + w / 2, currentY + 2, { align: 'center' });
+    currentY += 3;
+  }
+
+  if ((logoEnabled && logoDataUrl) || (phoneEnabled && companyPhone)) {
+    doc.setDrawColor(220);
+    doc.line(x + 1, currentY, x + w - 1, currentY);
+    currentY += 1;
+  }
+
+  // Zone 2: Field titles + underlines only (no values)
+  doc.setTextColor(0);
+  const fieldFontSizeMap: Record<number, number> = { 1: 6, 2: 7, 3: 9 };
+  const labelGap = 0.5;
+
+  type FieldRow = { type: 'full'; field: FieldDef } | { type: 'pair'; left: FieldDef; right: FieldDef };
+  const fieldRows: FieldRow[] = [];
+  let fi = 0;
+  while (fi < fields.length) {
+    const f = fields[fi];
+    if (f.layout === 'half' && fi + 1 < fields.length && fields[fi + 1].layout === 'half') {
+      fieldRows.push({ type: 'pair', left: f, right: fields[fi + 1] });
+      fi += 2;
+    } else {
+      fieldRows.push({ type: 'full', field: f });
+      fi++;
+    }
+  }
+
+  function drawBlankInlineField(field: FieldDef, startX: number, endX: number, drawY: number, fontSize: number) {
+    doc.setFontSize(fontSize);
+    doc.setFont('Helvetica', 'bold');
+    doc.setTextColor(0);
+    doc.text(field.label, startX, drawY);
+    const labelW = doc.getTextWidth(field.label);
+    const lineStartX = startX + labelW + labelGap;
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.15);
+    doc.line(lineStartX, drawY + 0.3, endX, drawY + 0.3);
+    doc.setFont('Helvetica', 'normal');
+  }
+
+  for (const row of fieldRows) {
+    if (row.type === 'full') {
+      const field = row.field;
+      const fontSize = fieldFontSizeMap[field.font_size] || 7;
+      const lineH = fontSize * 0.45;
+      if (currentY + lineH > y + h * 0.6) break;
+
+      drawBlankInlineField(field, leftPad, rightPad, currentY + lineH, fontSize);
+      currentY += lineH + 0.8;
+    } else {
+      const fontSize = fieldFontSizeMap[row.left.font_size] || 7;
+      const lineH = fontSize * 0.45;
+      if (currentY + lineH > y + h * 0.6) break;
+
+      const halfEnd = leftPad + innerW / 2 - 1;
+      const rightStart = leftPad + innerW / 2 + 1;
+
+      drawBlankInlineField(row.left, leftPad, halfEnd, currentY + lineH, fontSize);
+      drawBlankInlineField(row.right, rightStart, rightPad, currentY + lineH, fontSize);
+      currentY += lineH + 0.8;
+    }
+  }
+
+  // Zone 3: Empty (no shape for blank labels) — just a grey area
+  const shapeZoneY = y + h * 0.6;
+  doc.setDrawColor(230);
+  doc.line(x + 1, shapeZoneY, x + w - 1, shapeZoneY);
 }
 
 export async function exportPdf(

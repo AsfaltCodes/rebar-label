@@ -1,5 +1,6 @@
 import { writable, derived, get } from 'svelte/store';
 import type { Job, Label, FieldDef } from '$lib/db/types';
+import { markSaving, markSaved, markError } from './saveStatusStore';
 
 export const currentJob = writable<Job | null>(null);
 export const labels = writable<Label[]>([]);
@@ -56,8 +57,8 @@ export async function createNewLabel(): Promise<void> {
     const newLabel = await db.createLabel({
       job_id: job.id,
       field_values: fieldValues,
-      shape_preset: null,
-      shape_segments: [],
+      shape_preset: 'straight',
+      shape_segments: [{ length: 200, angle: 0 }],
       copies: 1,
       sort_order: maxOrder + 1,
     });
@@ -92,6 +93,45 @@ export async function deleteLabel(id: number): Promise<void> {
   }
 }
 
+export async function duplicateLabel(sourceId: number): Promise<void> {
+  const job = get(currentJob);
+  if (!job) return;
+
+  try {
+    const { db } = await import('$lib/db/api');
+    const currentLabels = get(labels);
+    const source = currentLabels.find(l => l.id === sourceId);
+    if (!source) return;
+
+    const maxOrder = Math.max(...currentLabels.map(l => l.sort_order));
+
+    // Auto-increment: find trailing number in first field value and bump it
+    const newFieldValues = { ...source.field_values };
+    if (job.fields.length > 0) {
+      const firstKey = job.fields[0].label;
+      const firstVal = newFieldValues[firstKey] || '';
+      const match = firstVal.match(/^(.*?)(\d+)$/);
+      if (match) {
+        newFieldValues[firstKey] = match[1] + String(parseInt(match[2]) + 1);
+      }
+    }
+
+    const newLabel = await db.createLabel({
+      job_id: job.id,
+      field_values: newFieldValues,
+      shape_preset: source.shape_preset,
+      shape_segments: [...source.shape_segments],
+      copies: source.copies,
+      sort_order: maxOrder + 1,
+    });
+
+    labels.update(ls => [...ls, newLabel]);
+    selectedLabelId.set(newLabel.id);
+  } catch (e) {
+    console.error('Failed to duplicate label:', e);
+  }
+}
+
 export function updateSelectedLabel(changes: Partial<Label>): void {
   const selId = get(selectedLabelId);
   if (selId === null) return;
@@ -100,13 +140,34 @@ export function updateSelectedLabel(changes: Partial<Label>): void {
     ls.map(l => (l.id === selId ? { ...l, ...changes } : l))
   );
 
-  // Debounced persist
+  // Debounced persist with save status feedback
+  markSaving();
   debouncedSave(async () => {
     try {
       const { db } = await import('$lib/db/api');
       await db.updateLabel(selId, changes);
+      markSaved();
     } catch (e) {
       console.error('Failed to save label:', e);
+      markError();
+    }
+  });
+}
+
+export function updateLabelById(id: number, changes: Partial<Label>): void {
+  labels.update(ls =>
+    ls.map(l => (l.id === id ? { ...l, ...changes } : l))
+  );
+
+  markSaving();
+  debouncedSave(async () => {
+    try {
+      const { db } = await import('$lib/db/api');
+      await db.updateLabel(id, changes);
+      markSaved();
+    } catch (e) {
+      console.error('Failed to save label:', e);
+      markError();
     }
   });
 }

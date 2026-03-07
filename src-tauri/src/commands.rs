@@ -15,6 +15,10 @@ fn row_to_template(row: &rusqlite::Row) -> rusqlite::Result<Value> {
         "fields": row.get::<_, String>(5)?,
         "created_at": row.get::<_, String>(6)?,
         "updated_at": row.get::<_, String>(7)?,
+        "sizing_mode": row.get::<_, String>(8).unwrap_or_else(|_| "grid".to_string()),
+        "columns": row.get::<_, i32>(9).unwrap_or(2),
+        "rows": row.get::<_, i32>(10).unwrap_or(5),
+        "phone_enabled": row.get::<_, i32>(11).unwrap_or(0) != 0,
     }))
 }
 
@@ -33,6 +37,13 @@ fn row_to_job(row: &rusqlite::Row) -> rusqlite::Result<Value> {
         "page_orientation": row.get::<_, String>(10)?,
         "created_at": row.get::<_, String>(11)?,
         "updated_at": row.get::<_, String>(12)?,
+        "client_name": row.get::<_, String>(13)?,
+        "notes": row.get::<_, String>(14)?,
+        "sizing_mode": row.get::<_, String>(15).unwrap_or_else(|_| "grid".to_string()),
+        "columns": row.get::<_, i32>(16).unwrap_or(2),
+        "rows": row.get::<_, i32>(17).unwrap_or(5),
+        "phone_enabled": row.get::<_, i32>(18).unwrap_or(0) != 0,
+        "job_field_values": row.get::<_, String>(19).unwrap_or_else(|_| "{}".to_string()),
     }))
 }
 
@@ -54,7 +65,7 @@ fn row_to_label(row: &rusqlite::Row) -> rusqlite::Result<Value> {
 pub fn list_templates(db: State<AppDb>) -> Result<Vec<Value>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
-        .prepare("SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at FROM templates ORDER BY updated_at DESC")
+        .prepare("SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled FROM templates ORDER BY updated_at DESC")
         .map_err(|e| e.to_string())?;
     let rows = stmt
         .query_map([], |row| row_to_template(row))
@@ -66,7 +77,7 @@ pub fn list_templates(db: State<AppDb>) -> Result<Vec<Value>, String> {
 pub fn get_template(db: State<AppDb>, id: i64) -> Result<Value, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     conn.query_row(
-        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at FROM templates WHERE id = ?1",
+        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled FROM templates WHERE id = ?1",
         params![id],
         |row| row_to_template(row),
     ).map_err(|e| e.to_string())
@@ -80,15 +91,24 @@ pub fn create_template(
     label_height_mm: f64,
     logo_enabled: bool,
     fields: String,
+    sizing_mode: Option<String>,
+    columns: Option<i32>,
+    rows: Option<i32>,
+    phone_enabled: Option<bool>,
 ) -> Result<Value, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let sm = sizing_mode.unwrap_or_else(|| "grid".to_string());
+    let cols = columns.unwrap_or(2);
+    let rws = rows.unwrap_or(5);
+    let pe = phone_enabled.unwrap_or(false) as i32;
+
     conn.execute(
-        "INSERT INTO templates (name, label_width_mm, label_height_mm, logo_enabled, fields) VALUES (?1, ?2, ?3, ?4, ?5)",
-        params![name, label_width_mm, label_height_mm, logo_enabled as i32, fields],
+        "INSERT INTO templates (name, label_width_mm, label_height_mm, logo_enabled, fields, sizing_mode, columns, rows, phone_enabled) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        params![name, label_width_mm, label_height_mm, logo_enabled as i32, fields, sm, cols, rws, pe],
     ).map_err(|e| e.to_string())?;
     let id = conn.last_insert_rowid();
     conn.query_row(
-        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at FROM templates WHERE id = ?1",
+        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled FROM templates WHERE id = ?1",
         params![id],
         |row| row_to_template(row),
     ).map_err(|e| e.to_string())
@@ -103,6 +123,10 @@ pub fn update_template(
     label_height_mm: Option<f64>,
     logo_enabled: Option<bool>,
     fields: Option<String>,
+    sizing_mode: Option<String>,
+    columns: Option<i32>,
+    rows: Option<i32>,
+    phone_enabled: Option<bool>,
 ) -> Result<Value, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     // Build dynamic SET clause
@@ -114,6 +138,10 @@ pub fn update_template(
     if let Some(v) = label_height_mm { sets.push(format!("label_height_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
     if let Some(v) = logo_enabled { sets.push(format!("logo_enabled = ?{}", values.len() + 1)); values.push(Box::new(v as i32)); }
     if let Some(v) = fields { sets.push(format!("fields = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = sizing_mode { sets.push(format!("sizing_mode = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = columns { sets.push(format!("columns = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = rows { sets.push(format!("rows = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = phone_enabled { sets.push(format!("phone_enabled = ?{}", values.len() + 1)); values.push(Box::new(v as i32)); }
 
     let id_param_idx = values.len() + 1;
     values.push(Box::new(id));
@@ -123,7 +151,7 @@ pub fn update_template(
     conn.execute(&sql, param_refs.as_slice()).map_err(|e| e.to_string())?;
 
     conn.query_row(
-        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at FROM templates WHERE id = ?1",
+        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled FROM templates WHERE id = ?1",
         params![id],
         |row| row_to_template(row),
     ).map_err(|e| e.to_string())
@@ -143,7 +171,7 @@ pub fn delete_template(db: State<AppDb>, id: i64) -> Result<(), String> {
 pub fn list_jobs(db: State<AppDb>) -> Result<Vec<Value>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
-        .prepare("SELECT id, name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, created_at, updated_at FROM jobs ORDER BY updated_at DESC")
+        .prepare("SELECT id, name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, created_at, updated_at, client_name, notes, sizing_mode, columns, rows, phone_enabled, job_field_values FROM jobs ORDER BY updated_at DESC")
         .map_err(|e| e.to_string())?;
     let rows = stmt
         .query_map([], |row| row_to_job(row))
@@ -155,7 +183,7 @@ pub fn list_jobs(db: State<AppDb>) -> Result<Vec<Value>, String> {
 pub fn get_job(db: State<AppDb>, id: i64) -> Result<Value, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     conn.query_row(
-        "SELECT id, name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, created_at, updated_at FROM jobs WHERE id = ?1",
+        "SELECT id, name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, created_at, updated_at, client_name, notes, sizing_mode, columns, rows, phone_enabled, job_field_values FROM jobs WHERE id = ?1",
         params![id],
         |row| row_to_job(row),
     ).map_err(|e| e.to_string())
@@ -174,15 +202,30 @@ pub fn create_job(
     page_width_mm: f64,
     page_height_mm: f64,
     page_orientation: String,
+    client_name: Option<String>,
+    notes: Option<String>,
+    sizing_mode: Option<String>,
+    columns: Option<i32>,
+    rows: Option<i32>,
+    phone_enabled: Option<bool>,
+    job_field_values: Option<String>,
 ) -> Result<Value, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let cn = client_name.unwrap_or_default();
+    let nt = notes.unwrap_or_default();
+    let sm = sizing_mode.unwrap_or_else(|| "grid".to_string());
+    let cols = columns.unwrap_or(2);
+    let rws = rows.unwrap_or(5);
+    let pe = phone_enabled.unwrap_or(false) as i32;
+    let jfv = job_field_values.unwrap_or_else(|| "{}".to_string());
+
     conn.execute(
-        "INSERT INTO jobs (name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
-        params![name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled as i32, page_size, page_width_mm, page_height_mm, page_orientation],
+        "INSERT INTO jobs (name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, client_name, notes, sizing_mode, columns, rows, phone_enabled, job_field_values) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
+        params![name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled as i32, page_size, page_width_mm, page_height_mm, page_orientation, cn, nt, sm, cols, rws, pe, jfv],
     ).map_err(|e| e.to_string())?;
     let id = conn.last_insert_rowid();
     conn.query_row(
-        "SELECT id, name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, created_at, updated_at FROM jobs WHERE id = ?1",
+        "SELECT id, name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, created_at, updated_at, client_name, notes, sizing_mode, columns, rows, phone_enabled, job_field_values FROM jobs WHERE id = ?1",
         params![id],
         |row| row_to_job(row),
     ).map_err(|e| e.to_string())
@@ -198,6 +241,13 @@ pub fn update_job(
     page_width_mm: Option<f64>,
     page_height_mm: Option<f64>,
     page_orientation: Option<String>,
+    client_name: Option<String>,
+    notes: Option<String>,
+    sizing_mode: Option<String>,
+    columns: Option<i32>,
+    rows: Option<i32>,
+    phone_enabled: Option<bool>,
+    job_field_values: Option<String>,
 ) -> Result<Value, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let mut sets: Vec<String> = vec!["updated_at = datetime('now')".to_string()];
@@ -209,6 +259,13 @@ pub fn update_job(
     if let Some(v) = page_width_mm { sets.push(format!("page_width_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
     if let Some(v) = page_height_mm { sets.push(format!("page_height_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
     if let Some(v) = page_orientation { sets.push(format!("page_orientation = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = client_name { sets.push(format!("client_name = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = notes { sets.push(format!("notes = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = sizing_mode { sets.push(format!("sizing_mode = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = columns { sets.push(format!("columns = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = rows { sets.push(format!("rows = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = phone_enabled { sets.push(format!("phone_enabled = ?{}", values.len() + 1)); values.push(Box::new(v as i32)); }
+    if let Some(v) = job_field_values { sets.push(format!("job_field_values = ?{}", values.len() + 1)); values.push(Box::new(v)); }
 
     let id_param_idx = values.len() + 1;
     values.push(Box::new(id));
@@ -218,7 +275,7 @@ pub fn update_job(
     conn.execute(&sql, param_refs.as_slice()).map_err(|e| e.to_string())?;
 
     conn.query_row(
-        "SELECT id, name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, created_at, updated_at FROM jobs WHERE id = ?1",
+        "SELECT id, name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, created_at, updated_at, client_name, notes, sizing_mode, columns, rows, phone_enabled, job_field_values FROM jobs WHERE id = ?1",
         params![id],
         |row| row_to_job(row),
     ).map_err(|e| e.to_string())

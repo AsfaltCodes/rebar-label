@@ -4,6 +4,7 @@ export interface LabelPosition {
   page: number;    // 0-indexed page number
   labelIndex: number; // which label this is a copy of
   copyIndex: number;  // which copy of that label
+  globalIndex: number; // 0-based sequential counter across all copies in the job
 }
 
 export interface PageLayout {
@@ -50,6 +51,7 @@ export function calculateLayout(
         page,
         labelIndex,
         copyIndex,
+        globalIndex: slot,
       });
       slot++;
     }

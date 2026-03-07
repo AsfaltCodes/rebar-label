@@ -71,6 +71,22 @@ impl AppDb {
             );"
         ).expect("Failed to create tables");
 
+        // Migrations: add columns that may not exist in older databases
+        conn.execute("ALTER TABLE jobs ADD COLUMN client_name TEXT NOT NULL DEFAULT ''", []).ok();
+        conn.execute("ALTER TABLE jobs ADD COLUMN notes TEXT NOT NULL DEFAULT ''", []).ok();
+
+        // Restore missing columns from reconstruction script failure
+        conn.execute("ALTER TABLE templates ADD COLUMN sizing_mode TEXT NOT NULL DEFAULT 'grid'", []).ok();
+        conn.execute("ALTER TABLE templates ADD COLUMN columns INTEGER NOT NULL DEFAULT 2", []).ok();
+        conn.execute("ALTER TABLE templates ADD COLUMN rows INTEGER NOT NULL DEFAULT 5", []).ok();
+        conn.execute("ALTER TABLE templates ADD COLUMN phone_enabled INTEGER NOT NULL DEFAULT 0", []).ok();
+
+        conn.execute("ALTER TABLE jobs ADD COLUMN sizing_mode TEXT NOT NULL DEFAULT 'grid'", []).ok();
+        conn.execute("ALTER TABLE jobs ADD COLUMN columns INTEGER NOT NULL DEFAULT 2", []).ok();
+        conn.execute("ALTER TABLE jobs ADD COLUMN rows INTEGER NOT NULL DEFAULT 5", []).ok();
+        conn.execute("ALTER TABLE jobs ADD COLUMN phone_enabled INTEGER NOT NULL DEFAULT 0", []).ok();
+        conn.execute("ALTER TABLE jobs ADD COLUMN job_field_values TEXT NOT NULL DEFAULT '{}'", []).ok();
+
         // Insert default settings if they don't exist
         let defaults = vec![
             ("logo_image_path", ""),

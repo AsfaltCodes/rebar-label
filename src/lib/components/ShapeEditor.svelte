@@ -8,7 +8,7 @@
   export let onChange: (preset: string | null, segs: Segment[]) => void = () => {};
 
   const presetNames = Object.keys(PRESET_LABELS) as PresetName[];
-  let noShape = shapePreset === null && segments.length === 0;
+  $: noShape = shapePreset === null && segments.length === 0;
 
   function handlePresetChange(e: Event) {
     const val = (e.target as HTMLSelectElement).value as PresetName;
@@ -36,11 +36,16 @@
   }
 
   function toggleNoShape() {
-    noShape = !noShape;
-    if (noShape) {
+    if (!noShape) {
+      // Currently has shape → clear it (noShape will recompute to true)
       shapePreset = null;
       segments = [];
       onChange(null, []);
+    } else {
+      // Currently no shape → add default segment (noShape will recompute to false)
+      segments = [{ length: 200, angle: 0 }];
+      shapePreset = null;
+      onChange(null, segments);
     }
   }
 </script>
