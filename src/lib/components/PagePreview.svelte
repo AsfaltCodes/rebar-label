@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { currentJob, labels, selectedLabelId, deleteLabel } from '$lib/stores/jobStore';
+  import { currentJob, labels, selectedLabelId, selectedLabelIds } from '$lib/stores/jobStore';
   import { settings } from '$lib/stores/settingsStore';
   import { currentPage } from '$lib/stores/uiStore';
   import { calculateLayout } from '$lib/layout/engine';
@@ -51,17 +51,50 @@
     ? layout.positions.filter(p => p.page === page)
     : [];
 
-  function selectLabel(labelIndex: number) {
-    if (allLabels[labelIndex]) {
-      selectedLabelId.set(allLabels[labelIndex].id);
+  let lastSelectedIdx = 0;
+
+  function handleSelectLabel(e: MouseEvent, labelIndex: number) {
+    if (!allLabels[labelIndex]) return;
+    const id = allLabels[labelIndex].id;
+    const isCtrl = e.ctrlKey || e.metaKey;
+    const isShift = e.shiftKey;
+
+    if (isShift) {
+      const start = Math.min(lastSelectedIdx, labelIndex);
+      const end = Math.max(lastSelectedIdx, labelIndex);
+      const newSelected = new Set(isCtrl ? $selectedLabelIds : []);
+      for (let i = start; i <= end; i++) {
+        if (allLabels[i]) {
+          newSelected.add(allLabels[i].id);
+        }
+      }
+      selectedLabelIds.set(newSelected);
+      selectedLabelId.set(id);
+    } else if (isCtrl) {
+      const newSelected = new Set($selectedLabelIds);
+      if (newSelected.has(id)) {
+        newSelected.delete(id);
+        if (newSelected.size === 0) {
+          selectedLabelId.set(null);
+        } else if ($selectedLabelId === id) {
+          selectedLabelId.set(Array.from(newSelected)[0]);
+        }
+      } else {
+        newSelected.add(id);
+        selectedLabelId.set(id);
+      }
+      selectedLabelIds.set(newSelected);
+      lastSelectedIdx = labelIndex;
+    } else {
+      selectedLabelIds.set(new Set([id]));
+      selectedLabelId.set(id);
+      lastSelectedIdx = labelIndex;
     }
   }
 
   function handleContextMenu(e: MouseEvent, labelIndex: number) {
     e.preventDefault();
-    // Context menu delete is now handled by LabelList's ConfirmDialog
-    // Just select the label on right-click
-    selectLabel(labelIndex);
+    handleSelectLabel(e, labelIndex);
   }
 
   function prevPage() {
@@ -97,14 +130,14 @@
                 widthMm={labelW}
                 heightMm={labelH}
                 {scale}
-                selected={label.id === $selectedLabelId}
+                selected={$selectedLabelIds.has(label.id)}
                 {logoSrc}
                 logoEnabled={job.logo_enabled}
                 phoneEnabled={job.phone_enabled}
                 companyPhone={s.company_phone}
                 labelNumber={pos.globalIndex + 1}
                 clientName={job.client_name || ''}
-                on:click={() => selectLabel(pos.labelIndex)}
+                on:click={(e) => handleSelectLabel(e, pos.labelIndex)}
                 on:contextmenu={(e) => handleContextMenu(e, pos.labelIndex)}
               />
             </div>

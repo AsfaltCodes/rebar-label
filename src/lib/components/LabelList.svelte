@@ -1,19 +1,50 @@
 <script lang="ts">
-  import { currentJob, labels, selectedLabelId, createNewLabel, deleteLabel, duplicateLabel, updateLabelById } from '$lib/stores/jobStore';
+  import { currentJob, labels, selectedLabelId, selectedLabelIds, createNewLabel, deleteLabels, duplicateLabel, updateLabelById } from '$lib/stores/jobStore';
   import { PRESET_LABELS, type PresetName } from '$lib/shapes/presets';
   import { addToast } from '$lib/stores/toastStore';
   import Icon from './ui/Icon.svelte';
   import Button from './ui/Button.svelte';
-  import ConfirmDialog from './ui/ConfirmDialog.svelte';
 
   $: job = $currentJob;
   $: allLabels = $labels;
   $: selId = $selectedLabelId;
+  $: selIds = $selectedLabelIds;
 
-  let deleteLabelConfirm = { open: false, id: 0, name: '' };
+  let lastSelectedIdx = 0;
 
-  function selectLabel(id: number) {
-    selectedLabelId.set(id);
+  function handleSelectLabel(e: MouseEvent, id: number, index: number) {
+    const isCtrl = e.ctrlKey || e.metaKey;
+    const isShift = e.shiftKey;
+
+    if (isShift) {
+      const start = Math.min(lastSelectedIdx, index);
+      const end = Math.max(lastSelectedIdx, index);
+      const newSelected = new Set(isCtrl ? $selectedLabelIds : []);
+      for (let i = start; i <= end; i++) {
+        newSelected.add(allLabels[i].id);
+      }
+      selectedLabelIds.set(newSelected);
+      selectedLabelId.set(id);
+    } else if (isCtrl) {
+      const newSelected = new Set($selectedLabelIds);
+      if (newSelected.has(id)) {
+        newSelected.delete(id);
+        if (newSelected.size === 0) {
+          selectedLabelId.set(null);
+        } else if ($selectedLabelId === id) {
+          selectedLabelId.set(Array.from(newSelected)[0]);
+        }
+      } else {
+        newSelected.add(id);
+        selectedLabelId.set(id);
+      }
+      selectedLabelIds.set(newSelected);
+      lastSelectedIdx = index;
+    } else {
+      selectedLabelIds.set(new Set([id]));
+      selectedLabelId.set(id);
+      lastSelectedIdx = index;
+    }
   }
 
   async function handleNew() {
@@ -28,18 +59,20 @@
     }
   }
 
-  function promptDelete(id: number, name: string) {
-    deleteLabelConfirm = { open: true, id, name };
+  async function performDelete(id: number) {
+    const idsToDelete = (selIds.has(id) && selIds.size > 1) ? Array.from(selIds) : [id];
+    await deleteLabels(idsToDelete);
+    addToast(idsToDelete.length > 1 ? `Deleted ${idsToDelete.length} labels` : 'Label deleted', 'info');
   }
 
-  async function confirmDelete() {
-    await deleteLabel(deleteLabelConfirm.id);
-    addToast('Label deleted', 'info');
-  }
-
-  function adjustCopies(label: any, delta: number) {
-    const newCopies = Math.max(1, label.copies + delta);
-    updateLabelById(label.id, { copies: newCopies });
+  function handleWindowKeydown(e: KeyboardEvent) {
+    if (e.key === 'Delete' && selIds.size > 0) {
+      const target = e.target as HTMLElement;
+      if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+        const id = Array.from(selIds)[0];
+        performDelete(id);
+      }
+    }
   }
 
   /** Get a display name for a label: first non-empty field value, or "Label #N" */
@@ -79,6 +112,8 @@
   }
 </script>
 
+<svelte:window on:keydown={handleWindowKeydown} />
+
 <div class="label-list">
   <div class="list-header">
     <span class="list-title">Labels</span>
@@ -114,8 +149,8 @@
         <!-- svelte-ignore a11y-no-static-element-interactions -->
         <div
           class="label-row"
-          class:selected={label.id === selId}
-          on:click={() => selectLabel(label.id)}
+          class:selected={selIds.has(label.id)}
+          on:click={(e) => handleSelectLabel(e, label.id, i)}
         >
           <div class="label-main">
             <div class="label-top-line">
@@ -131,14 +166,9 @@
             {/if}
           </div>
           <div class="label-controls">
-            <div class="copies-inline">
-              <button class="copies-btn" on:click|stopPropagation={() => adjustCopies(label, -1)} disabled={label.copies <= 1} title="Fewer copies">-</button>
-              <span class="copies-count">{label.copies}</span>
-              <button class="copies-btn" on:click|stopPropagation={() => adjustCopies(label, 1)} title="More copies">+</button>
-            </div>
             <button
               class="delete-btn"
-              on:click|stopPropagation={() => promptDelete(label.id, getLabelName(label, i))}
+              on:click|stopPropagation={() => performDelete(label.id)}
               title="Delete label"
             >
               <Icon name="trash" size={13} />
@@ -149,15 +179,6 @@
     {/if}
   </div>
 </div>
-
-<ConfirmDialog
-  bind:open={deleteLabelConfirm.open}
-  title="Delete Label"
-  message={`Delete "${deleteLabelConfirm.name}"? This cannot be undone.`}
-  confirmLabel="Delete"
-  danger={true}
-  onConfirm={confirmDelete}
-/>
 
 <style>
   .label-list {
@@ -280,43 +301,6 @@
     align-items: center;
     gap: 2px;
     flex-shrink: 0;
-  }
-  .copies-inline {
-    display: flex;
-    align-items: center;
-    gap: 1px;
-  }
-  .copies-btn {
-    width: 16px;
-    height: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--color-surface-alt);
-    border: 1px solid var(--color-border);
-    border-radius: 3px;
-    color: var(--color-text-muted);
-    cursor: pointer;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 0;
-    line-height: 1;
-  }
-  .copies-btn:disabled {
-    opacity: 0.2;
-    cursor: not-allowed;
-  }
-  .copies-btn:hover:not(:disabled) {
-    background: var(--color-surface-hover);
-    border-color: var(--color-input-border);
-  }
-  .copies-count {
-    font-size: 10px;
-    font-weight: 600;
-    min-width: 14px;
-    text-align: center;
-    color: var(--color-text-muted);
-    font-variant-numeric: tabular-nums;
   }
 
   .delete-btn {

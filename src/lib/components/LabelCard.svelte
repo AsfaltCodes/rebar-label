@@ -124,12 +124,6 @@
         </div>
       {/if}
     {/each}
-    {#if totalLength > 0}
-      <div class="field-row total-row">
-        <span class="field-name">Total</span>
-        <span class="field-fill bold">{totalLength} mm<span class="field-line"></span></span>
-      </div>
-    {/if}
   </div>
 
   {#if hasShape && shapeData}
@@ -257,10 +251,6 @@
     right: 0;
     bottom: 0;
     border-bottom: 1px solid var(--color-text);
-  }
-  .total-row {
-    border-top: 1px solid var(--color-border-light);
-    padding-top: 1px;
   }
   .shape-zone {
     border-top: 1px solid var(--color-border-light);

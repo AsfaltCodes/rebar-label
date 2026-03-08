@@ -291,7 +291,7 @@
 
   .job-table th {
     text-align: left;
-    padding: var(--space-2) var(--space-3);
+    padding: var(--space-3) var(--space-4);
     font-size: var(--text-sm);
     font-weight: 600;
     color: var(--color-text-muted);
@@ -334,13 +334,14 @@
   }
 
   .job-row td {
-    padding: var(--space-2) var(--space-3);
+    padding: var(--space-3) var(--space-4);
     border-bottom: 1px solid var(--color-border);
     color: var(--color-text);
   }
 
   .cell-name {
     font-weight: 500;
+    font-size: var(--text-lg);
   }
 
   .cell-client {

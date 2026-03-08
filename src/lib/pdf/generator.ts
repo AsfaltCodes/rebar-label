@@ -71,21 +71,6 @@ export function generatePdf(
       const blankY = settings.margin_top_mm + row * (labelH + settings.label_gap_mm);
       drawBlankLabel(doc, blankX, blankY, labelW, labelH, job.fields, job.logo_enabled, logoDataUrl, job.phone_enabled, settings.company_phone);
     }
-
-    // Page footer: company name + page number
-    doc.setFontSize(7);
-    doc.setTextColor(160);
-    doc.setFont('Helvetica', 'normal');
-    const footerY = pageH - 3;
-    if (settings.company_name) {
-      doc.text(settings.company_name, settings.margin_left_mm, footerY);
-    }
-    doc.text(
-      `Page ${page + 1} of ${layout.totalPages}`,
-      pageW - settings.margin_right_mm,
-      footerY,
-      { align: 'right' }
-    );
   }
 
   return doc;

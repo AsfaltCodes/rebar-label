@@ -66,7 +66,7 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
   const allY = points.map(p => p.y);
   const boundsW = Math.max(...allX) - Math.min(...allX);
   const boundsH = Math.max(...allY) - Math.min(...allY);
-  const padding = Math.max(boundsW, boundsH, 1) * 0.12;
+  const padding = Math.max(boundsW, boundsH, 1) * 0.22;
   const bounds = {
     minX: Math.min(...allX) - padding,
     minY: Math.min(...allY) - padding,

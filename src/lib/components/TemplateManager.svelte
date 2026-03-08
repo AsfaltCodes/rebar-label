@@ -181,7 +181,7 @@
 <style>
   .template-manager {
     padding: var(--space-5);
-    max-width: 900px;
+    max-width: 1200px;
     margin: 0 auto;
     height: 100%;
     overflow-y: auto;
@@ -218,8 +218,8 @@
   }
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--space-3);
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-4);
   }
   .card {
     background: var(--color-surface);

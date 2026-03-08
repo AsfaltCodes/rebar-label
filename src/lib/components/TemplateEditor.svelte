@@ -47,8 +47,8 @@
   $: previewW = previewDims.width;
   $: previewH = previewDims.height;
 
-  // Scale to fit ~240px wide preview area
-  $: previewScale = Math.min(240 / previewW, 300 / previewH, 4);
+  // Scale to fit ~360px wide preview area
+  $: previewScale = Math.min(360 / previewW, 450 / previewH, 4);
 
   // Build a sample label for preview
   $: sampleLabel = ({
@@ -292,18 +292,18 @@
 <style>
   .template-editor {
     padding: var(--space-5);
-    max-width: 920px;
+    max-width: 1200px;
     margin: 0 auto;
     display: flex;
-    gap: var(--space-5);
+    gap: var(--space-6);
   }
   .editor-form {
     flex: 1;
-    max-width: 640px;
+    max-width: 800px;
     min-width: 0;
   }
   .preview-sidebar {
-    width: 280px;
+    width: 400px;
     flex-shrink: 0;
     position: sticky;
     top: var(--space-5);
@@ -335,12 +335,12 @@
 
   h3 {
     margin: 0 0 var(--space-4);
-    font-size: var(--text-xl);
+    font-size: var(--text-2xl);
     color: var(--color-text);
   }
   h4 {
     margin: 0 0 var(--space-2);
-    font-size: var(--text-md);
+    font-size: var(--text-xl);
     color: var(--color-text-secondary);
   }
   .section {
@@ -353,7 +353,7 @@
   }
   .form-group label {
     display: block;
-    font-size: var(--text-sm);
+    font-size: var(--text-base);
     font-weight: 500;
     color: var(--color-text-secondary);
     margin-bottom: var(--space-1);
@@ -361,10 +361,10 @@
   .form-group input[type="text"],
   .form-group input[type="number"] {
     width: 100%;
-    padding: var(--space-2) var(--space-3);
+    padding: var(--space-3) var(--space-4);
     border: 1px solid var(--color-input-border);
     border-radius: var(--radius-md);
-    font-size: var(--text-md);
+    font-size: var(--text-lg);
     box-sizing: border-box;
     background: var(--color-surface);
     color: var(--color-text);
@@ -384,7 +384,7 @@
     font-size: var(--text-base) !important;
   }
   .hint {
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     color: var(--color-text-faint);
     margin: var(--space-1) 0 0;
     line-height: 1.4;
@@ -422,7 +422,7 @@
     cursor: pointer;
   }
   .file-input {
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     color: var(--color-text-secondary);
   }
 
@@ -438,12 +438,12 @@
     margin-bottom: var(--space-2);
   }
   .add-field-btn {
-    padding: var(--space-1) var(--space-3);
+    padding: var(--space-2) var(--space-4);
     background: var(--color-primary-light);
     color: var(--color-primary);
     border: 1px solid var(--color-primary-border);
     border-radius: var(--radius-sm);
-    font-size: var(--text-sm);
+    font-size: var(--text-base);
     font-weight: 500;
     cursor: pointer;
   }
@@ -460,10 +460,10 @@
     display: flex;
     align-items: center;
     gap: var(--space-1);
-    padding: var(--space-1);
+    padding: var(--space-2);
     background: var(--color-surface-hover);
     border-radius: var(--radius-md);
-    margin-bottom: var(--space-1);
+    margin-bottom: var(--space-2);
   }
   .field-controls {
     display: flex;
@@ -487,33 +487,33 @@
   .field-inputs {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
     flex: 1;
     flex-wrap: wrap;
   }
   .field-name-input {
-    width: 120px;
-    padding: 4px 6px;
+    width: 140px;
+    padding: 6px 8px;
     border: 1px solid var(--color-input-border);
     border-radius: var(--radius-sm);
-    font-size: var(--text-sm);
+    font-size: var(--text-base);
     background: var(--color-surface);
     color: var(--color-text);
   }
   .field-default-input {
-    width: 100px;
-    padding: 4px 6px;
+    width: 120px;
+    padding: 6px 8px;
     border: 1px solid var(--color-input-border);
     border-radius: var(--radius-sm);
-    font-size: var(--text-sm);
+    font-size: var(--text-base);
     background: var(--color-surface);
     color: var(--color-text);
   }
   .field-inputs select {
-    padding: 4px 6px;
+    padding: 6px 8px;
     border: 1px solid var(--color-input-border);
     border-radius: var(--radius-sm);
-    font-size: var(--text-sm);
+    font-size: var(--text-base);
     background: var(--color-surface);
     color: var(--color-text);
   }
@@ -540,16 +540,16 @@
     border-color: var(--color-text);
   }
   .layout-select {
-    width: 60px;
-    font-size: var(--text-xs);
+    width: 80px;
+    font-size: var(--text-sm);
   }
   .scope-select {
-    width: 80px;
-    font-size: var(--text-xs);
+    width: 100px;
+    font-size: var(--text-sm);
   }
   .source-select {
-    width: 90px;
-    font-size: var(--text-xs);
+    width: 110px;
+    font-size: var(--text-sm);
   }
   .field-inputs select:disabled {
     opacity: 0.4;
@@ -559,22 +559,22 @@
     background: none;
     border: none;
     color: var(--color-danger);
-    font-size: 18px;
+    font-size: 24px;
     cursor: pointer;
-    padding: 2px 6px;
+    padding: 4px 8px;
     line-height: 1;
   }
   .form-actions {
     display: flex;
-    gap: var(--space-2);
-    margin-top: var(--space-5);
+    gap: var(--space-3);
+    margin-top: var(--space-6);
     justify-content: flex-end;
   }
   .btn {
-    padding: var(--space-2) var(--space-5);
+    padding: var(--space-3) var(--space-6);
     border: none;
     border-radius: var(--radius-md);
-    font-size: var(--text-md);
+    font-size: var(--text-lg);
     font-weight: 500;
     cursor: pointer;
   }

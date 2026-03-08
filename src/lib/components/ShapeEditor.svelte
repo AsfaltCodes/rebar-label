@@ -48,6 +48,17 @@
       onChange(null, segments);
     }
   }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const inputs = Array.from(document.querySelectorAll('.seg-input')) as HTMLElement[];
+      const currentIndex = inputs.indexOf(e.target as HTMLElement);
+      if (currentIndex !== -1 && currentIndex < inputs.length - 1) {
+        inputs[currentIndex + 1].focus();
+      }
+    }
+  }
 </script>
 
 <div class="shape-editor">
@@ -70,7 +81,7 @@
       </label>
     </div>
 
-    <ShapePreview {segments} width={220} height={130} />
+    <ShapePreview {segments} width={300} height={180} />
 
     <div class="segments-list">
       <div class="seg-header">Segments:</div>
@@ -82,6 +93,7 @@
             class="seg-input"
             value={seg.length}
             on:input={(e) => handleSegmentChange(i, 'length', parseFloat(e.currentTarget.value) || 0)}
+            on:keydown={handleKeydown}
             min="0"
             step="10"
           />
@@ -92,6 +104,7 @@
             class="seg-input seg-angle"
             value={seg.angle}
             on:input={(e) => handleSegmentChange(i, 'angle', parseFloat(e.currentTarget.value) || 0)}
+            on:keydown={handleKeydown}
             step="5"
           />
           <span class="seg-unit">deg</span>

@@ -5,6 +5,7 @@ import { markSaving, markSaved, markError } from './saveStatusStore';
 export const currentJob = writable<Job | null>(null);
 export const labels = writable<Label[]>([]);
 export const selectedLabelId = writable<number | null>(null);
+export const selectedLabelIds = writable<Set<number>>(new Set());
 
 export const selectedLabel = derived(
   [labels, selectedLabelId],
@@ -31,8 +32,10 @@ export async function loadJob(jobId: number): Promise<void> {
     labels.set(jobLabels);
     if (jobLabels.length > 0) {
       selectedLabelId.set(jobLabels[0].id);
+      selectedLabelIds.set(new Set([jobLabels[0].id]));
     } else {
       selectedLabelId.set(null);
+      selectedLabelIds.set(new Set());
     }
   } catch (e) {
     console.error('Failed to load job:', e);
@@ -65,32 +68,45 @@ export async function createNewLabel(): Promise<void> {
 
     labels.update(ls => [...ls, newLabel]);
     selectedLabelId.set(newLabel.id);
+    selectedLabelIds.set(new Set([newLabel.id]));
   } catch (e) {
     console.error('Failed to create label:', e);
   }
 }
 
-export async function deleteLabel(id: number): Promise<void> {
+export async function deleteLabels(ids: number[]): Promise<void> {
   try {
     const { db } = await import('$lib/db/api');
-    await db.deleteLabel(id);
+    for (const id of ids) {
+      await db.deleteLabel(id);
+    }
 
     labels.update(ls => {
-      const filtered = ls.filter(l => l.id !== id);
-      // If deleting the selected label, select another one
+      const filtered = ls.filter(l => !ids.includes(l.id));
+      
+      const selIds = get(selectedLabelIds);
+      ids.forEach(id => selIds.delete(id));
+      selectedLabelIds.set(selIds);
+
       const sel = get(selectedLabelId);
-      if (sel === id) {
+      if (sel !== null && ids.includes(sel)) {
         if (filtered.length > 0) {
           selectedLabelId.set(filtered[0].id);
+          selectedLabelIds.update(s => new Set([...s, filtered[0].id]));
         } else {
           selectedLabelId.set(null);
+          selectedLabelIds.set(new Set());
         }
       }
       return filtered;
     });
   } catch (e) {
-    console.error('Failed to delete label:', e);
+    console.error('Failed to delete labels:', e);
   }
+}
+
+export async function deleteLabel(id: number): Promise<void> {
+  await deleteLabels([id]);
 }
 
 export async function duplicateLabel(sourceId: number): Promise<void> {
@@ -127,6 +143,7 @@ export async function duplicateLabel(sourceId: number): Promise<void> {
 
     labels.update(ls => [...ls, newLabel]);
     selectedLabelId.set(newLabel.id);
+    selectedLabelIds.set(new Set([newLabel.id]));
   } catch (e) {
     console.error('Failed to duplicate label:', e);
   }

@@ -12,9 +12,7 @@
   $: label = $selectedLabel;
   $: s = $settings;
   $: logoSrc = s.logo_image_path || null;
-  $: totalLength = label?.shape_segments?.length
-    ? label.shape_segments.reduce((sum: number, s: any) => sum + (s.length || 0), 0)
-    : 0;
+  $: totalLength = (label?.shape_segments || []).reduce((sum: number, s: any) => sum + (Number(s.length) || 0), 0);
 
   function isJobScoped(field: FieldDef): boolean {
     return field.scope === 'job';
@@ -27,18 +25,18 @@
   // Reactive lookup — Svelte tracks job, label, and totalLength dependencies
   $: fieldValues = buildFieldValues(job, label, totalLength);
 
-  function buildFieldValues(job: any, label: any, totalLen: number): Record<string, string> {
+  function buildFieldValues(jobData: any, labelData: any, totalLen: number): Record<string, string> {
     const vals: Record<string, string> = {};
-    if (!job) return vals;
-    for (const f of job.fields) {
+    if (!jobData) return vals;
+    for (const f of jobData.fields) {
       if (f.source === 'total_length') {
         vals[f.label] = totalLen > 0 ? `${totalLen} mm` : '—';
       } else if (f.source === 'client_name') {
-        vals[f.label] = job.client_name || '—';
+        vals[f.label] = jobData.client_name || '—';
       } else if (f.scope === 'job') {
-        vals[f.label] = job?.job_field_values?.[f.label] || '';
+        vals[f.label] = jobData?.job_field_values?.[f.label] || '';
       } else {
-        vals[f.label] = label?.field_values?.[f.label] || '';
+        vals[f.label] = labelData?.field_values?.[f.label] || '';
       }
     }
     return vals;
@@ -92,12 +90,13 @@
       <div class="section-header">Fields</div>
       <div class="fields-list">
         {#each job.fields as field}
-          <div class="field-wrapper" class:shared={isJobScoped(field)} class:computed={isComputed(field)}>
+          <div class="field-wrapper">
             {#if isComputed(field)}
-              <div class="computed-field">
-                <span class="computed-label">{field.label}</span>
-                <span class="computed-value">{fieldValues[field.label] || '—'}</span>
-              </div>
+              <FieldInput
+                {field}
+                value={fieldValues[field.label] || '—'}
+                readonly={true}
+              />
               <span class="computed-badge" title="Auto-calculated from shape segments">auto</span>
             {:else}
               <FieldInput
@@ -157,8 +156,8 @@
   .label-editor {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
-    padding: var(--space-3);
+    gap: var(--space-4);
+    padding: var(--space-4);
     height: 100%;
     overflow-y: auto;
   }
@@ -189,7 +188,7 @@
   .section {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: var(--space-3);
   }
   .section-header {
     font-weight: 600;
@@ -201,19 +200,14 @@
   .fields-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: var(--space-3);
   }
   .field-wrapper {
     position: relative;
   }
-  .field-wrapper.shared {
-    border-left: 2px solid var(--color-primary);
-    padding-left: var(--space-2);
-    border-radius: 2px;
-  }
   .shared-badge {
     position: absolute;
-    right: 0;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
     font-size: 9px;
@@ -223,30 +217,9 @@
     letter-spacing: 0.5px;
     font-weight: 600;
   }
-  .field-wrapper.computed {
-    border-left: 2px solid var(--color-text-faint);
-    padding-left: var(--space-2);
-    border-radius: 2px;
-  }
-  .computed-field {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-1) 0;
-  }
-  .computed-label {
-    font-size: var(--text-sm);
-    font-weight: 500;
-    color: var(--color-text-secondary);
-  }
-  .computed-value {
-    font-size: var(--text-base);
-    font-weight: 600;
-    color: var(--color-text);
-  }
   .computed-badge {
     position: absolute;
-    right: 0;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
     font-size: 9px;
