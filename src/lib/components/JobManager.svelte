@@ -4,6 +4,7 @@
   import { currentScreen, showNewJobModal } from '$lib/stores/uiStore';
   import { loadJob } from '$lib/stores/jobStore';
   import { addToast } from '$lib/stores/toastStore';
+  import { _ } from '$lib/stores/i18n';
   import Icon from './ui/Icon.svelte';
   import Button from './ui/Button.svelte';
   import ConfirmDialog from './ui/ConfirmDialog.svelte';
@@ -117,19 +118,19 @@
 
 <div class="job-manager">
   <div class="jm-header">
-    <h2 class="jm-title">Jobs</h2>
+    <h2 class="jm-title">{$_('jobs.title')}</h2>
     <div class="jm-actions">
       <div class="search-box">
         <Icon name="search" size={14} />
         <input
           type="text"
-          placeholder="Search jobs..."
+          placeholder={$_('jobs.search_placeholder')}
           bind:value={search}
         />
       </div>
       <Button variant="primary" on:click={() => showNewJobModal.set(true)}>
         <Icon name="plus" size={14} />
-        New Job
+        {$_('jobs.new_job')}
       </Button>
     </div>
   </div>
@@ -137,11 +138,11 @@
   {#if jobs.length === 0}
     <div class="empty-state">
       <Icon name="file-text" size={48} />
-      <p>No jobs yet</p>
-      <p class="empty-hint">Create your first job to get started</p>
+      <p>{$_('jobs.empty.title')}</p>
+      <p class="empty-hint">{$_('jobs.empty.desc')}</p>
       <Button variant="primary" on:click={() => showNewJobModal.set(true)}>
         <Icon name="plus" size={14} />
-        New Job
+        {$_('jobs.new_job')}
       </Button>
     </div>
   {:else}
@@ -150,19 +151,19 @@
         <thead>
           <tr>
             <th class="sortable" on:click={() => handleSort('name')}>
-              Name{sortIndicator('name')}
+              {$_('jobs.table.name')}{sortIndicator('name')}
             </th>
             <th class="sortable" on:click={() => handleSort('client_name')}>
-              Client{sortIndicator('client_name')}
+              {$_('jobs.table.client')}{sortIndicator('client_name')}
             </th>
             <th class="sortable col-num" on:click={() => handleSort('labelCount')}>
-              Labels{sortIndicator('labelCount')}
+              {$_('jobs.table.labels')}{sortIndicator('labelCount')}
             </th>
             <th class="sortable col-date" on:click={() => handleSort('created_at')}>
-              Created{sortIndicator('created_at')}
+              {$_('jobs.table.created')}{sortIndicator('created_at')}
             </th>
             <th class="sortable col-date" on:click={() => handleSort('updated_at')}>
-              Modified{sortIndicator('updated_at')}
+              {$_('jobs.table.modified')}{sortIndicator('updated_at')}
             </th>
             <th class="col-actions"></th>
           </tr>
@@ -180,7 +181,7 @@
                 <button
                   class="row-delete"
                   on:click|stopPropagation={() => promptDelete(job.id, job.name)}
-                  title="Delete job"
+                  title={$_('modal.delete')}
                 >
                   <Icon name="trash" size={14} />
                 </button>
@@ -189,7 +190,7 @@
           {/each}
           {#if sorted.length === 0 && search.trim()}
             <tr>
-              <td colspan="6" class="no-results">No jobs match "{search}"</td>
+              <td colspan="6" class="no-results">{$_('jobs.no_results', { search })}</td>
             </tr>
           {/if}
         </tbody>
@@ -200,9 +201,9 @@
 
 <ConfirmDialog
   bind:open={deleteConfirm.open}
-  title="Delete Job"
-  message={`Delete "${deleteConfirm.name}" and all its labels? This cannot be undone.`}
-  confirmLabel="Delete"
+  title={$_('modal.delete_job.title')}
+  message={$_('modal.delete_job.message', { name: deleteConfirm.name })}
+  confirmLabel={$_('modal.delete')}
   danger={true}
   onConfirm={confirmDelete}
 />
@@ -332,14 +333,13 @@
   .job-row:hover {
     background: var(--color-surface-hover);
   }
+.job-row td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+}
 
-  .job-row td {
-    padding: var(--space-3) var(--space-4);
-    border-bottom: 1px solid var(--color-border);
-    color: var(--color-text);
-  }
-
-  .cell-name {
+.cell-name {
     font-weight: 500;
     font-size: var(--text-lg);
   }

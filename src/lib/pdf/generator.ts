@@ -38,7 +38,7 @@ export function generatePdf(
     labels.map(l => ({ copies: l.copies }))
   );
 
-  const orientation = job.page_orientation === 'landscape' ? 'landscape' : 'portrait';
+  const orientation = pageW > pageH ? 'landscape' : 'portrait';
   const doc = new jsPDF({
     orientation,
     unit: 'mm',
@@ -133,9 +133,9 @@ function drawLabel(
 
   // Phone number (below logo or at top if no logo)
   if (phoneEnabled && companyPhone) {
-    doc.setFontSize(5);
-    doc.setTextColor(120);
-    doc.setFont('Helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(0);
+    doc.setFont('Helvetica', 'bold');
     doc.text(companyPhone, x + w / 2, currentY + 2, { align: 'center' });
     currentY += 3;
   }
@@ -280,12 +280,12 @@ function drawLabel(
     }
   }
 
-  // Label counter at bottom-right
+  // Label counter at bottom-center
   if (labelNumber !== undefined) {
-    doc.setFontSize(5);
-    doc.setTextColor(180);
+    doc.setFontSize(7);
+    doc.setTextColor(0);
     doc.setFont('Helvetica', 'normal');
-    doc.text(String(labelNumber), x + w - 1.5, y + h - 1, { align: 'right' });
+    doc.text(String(labelNumber), x + w / 2, y + h - 1, { align: 'center' });
   }
 }
 
@@ -323,9 +323,9 @@ function drawBlankLabel(
   }
 
   if (phoneEnabled && companyPhone) {
-    doc.setFontSize(5);
-    doc.setTextColor(120);
-    doc.setFont('Helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(0);
+    doc.setFont('Helvetica', 'bold');
     doc.text(companyPhone, x + w / 2, currentY + 2, { align: 'center' });
     currentY += 3;
   }

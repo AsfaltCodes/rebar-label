@@ -3,6 +3,7 @@
   import { settings, updateSettings } from '$lib/stores/settingsStore';
   import { showSettingsModal } from '$lib/stores/uiStore';
   import { addToast } from '$lib/stores/toastStore';
+  import { _ } from '$lib/stores/i18n';
   import Button from './ui/Button.svelte';
   import Icon from './ui/Icon.svelte';
 
@@ -16,6 +17,7 @@
   function handleSave() {
     updateSettings(s);
     showSettingsModal.set(false);
+    // Note: Toasts are tricky to translate instantly if they fire before store updates, but we can hardcode or translate them too.
     addToast('Settings saved', 'success');
   }
 
@@ -55,7 +57,7 @@
   <div class="backdrop" on:click={handleBackdropClick} transition:fade={{ duration: 150 }}>
     <div class="modal" transition:fly={{ y: 16, duration: 200 }}>
       <div class="modal-header">
-        <h2>Settings</h2>
+        <h2>{$_('settings.title')}</h2>
         <button class="close-btn" on:click={handleCancel} aria-label="Close">
           <Icon name="x" size={18} />
         </button>
@@ -64,84 +66,75 @@
       <div class="modal-body">
         <!-- Company -->
         <section class="section">
-          <h3 class="section-title">Company</h3>
+          <h3 class="section-title">{$_('settings.company')}</h3>
           <div class="form-group">
-            <label>Company Name</label>
+            <label>{$_('settings.company_name')}</label>
             <input type="text" bind:value={s.company_name} placeholder="Your company name" />
           </div>
           <div class="form-group">
-            <label>Company Phone</label>
+            <label>{$_('settings.company_phone')}</label>
             <input type="text" bind:value={s.company_phone} placeholder="e.g. +40 123 456 789" />
           </div>
         </section>
 
         <!-- Branding -->
         <section class="section">
-          <h3 class="section-title">Branding</h3>
+          <h3 class="section-title">{$_('settings.branding')}</h3>
           {#if s.logo_image_path}
             <div class="logo-preview">
               <img src={s.logo_image_path} alt="Logo preview" />
-              <Button variant="danger" size="sm" on:click={clearLogo}>Remove</Button>
+              <Button variant="danger" size="sm" on:click={clearLogo}>{$_('common.remove')}</Button>
             </div>
           {:else}
             <p class="hint">No logo uploaded</p>
           {/if}
           <input type="file" accept="image/*" on:change={handleLogoUpload} class="file-input" />
-          <p class="hint">Templates control whether the logo appears on each label.</p>
+          <p class="hint">{$_('settings.branding_hint')}</p>
         </section>
 
-        <!-- Page Defaults -->
+        <!-- Preferences -->
         <section class="section">
-          <h3 class="section-title">Page Defaults</h3>
+          <h3 class="section-title">{$_('settings.prefs')}</h3>
           <div class="form-group">
-            <label>Default Page Size</label>
-            <select bind:value={s.default_page_size}>
-              <option value="A4">A4 (210 x 297 mm)</option>
-              <option value="A3">A3 (297 x 420 mm)</option>
-              <option value="Letter">Letter (215.9 x 279.4 mm)</option>
+            <label>{$_('settings.lang')}</label>
+            <select bind:value={s.language}>
+              <option value="en">English</option>
+              <option value="ro">Română</option>
             </select>
           </div>
-          <div class="form-group">
-            <label>Default Orientation</label>
-            <select bind:value={s.default_page_orientation}>
-              <option value="portrait">Portrait</option>
-              <option value="landscape">Landscape</option>
-            </select>
-          </div>
-          <p class="hint">Applied to new jobs by default.</p>
         </section>
 
         <!-- Print Layout -->
         <section class="section">
-          <h3 class="section-title">Print Layout</h3>
+          <h3 class="section-title">{$_('settings.print_layout')}</h3>
           <div class="margin-grid">
             <div class="form-group">
-              <label>Top (mm)</label>
+              <label>{$_('settings.top')}</label>
               <input type="number" bind:value={s.margin_top_mm} min="0" max="100" step="1" />
             </div>
             <div class="form-group">
-              <label>Bottom (mm)</label>
+              <label>{$_('settings.bottom')}</label>
               <input type="number" bind:value={s.margin_bottom_mm} min="0" max="100" step="1" />
             </div>
             <div class="form-group">
-              <label>Left (mm)</label>
+              <label>{$_('settings.left')}</label>
               <input type="number" bind:value={s.margin_left_mm} min="0" max="100" step="1" />
             </div>
             <div class="form-group">
-              <label>Right (mm)</label>
+              <label>{$_('settings.right')}</label>
               <input type="number" bind:value={s.margin_right_mm} min="0" max="100" step="1" />
             </div>
           </div>
           <div class="form-group">
-            <label>Label Gap (mm)</label>
+            <label>{$_('settings.gap')}</label>
             <input type="number" bind:value={s.label_gap_mm} min="0" max="50" step="0.5" />
           </div>
         </section>
       </div>
 
       <div class="modal-footer">
-        <Button variant="ghost" on:click={handleCancel}>Cancel</Button>
-        <Button variant="primary" on:click={handleSave}>Save Settings</Button>
+        <Button variant="ghost" on:click={handleCancel}>{$_('common.cancel')}</Button>
+        <Button variant="primary" on:click={handleSave}>{$_('settings.save')}</Button>
       </div>
     </div>
   </div>

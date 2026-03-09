@@ -19,6 +19,10 @@ export interface Template {
   label_height_mm: number;
   logo_enabled: boolean;
   phone_enabled: boolean;
+  page_size: string;
+  page_width_mm: number;
+  page_height_mm: number;
+  page_orientation: 'portrait' | 'landscape';
   fields: FieldDef[];
   created_at: string;
   updated_at: string;
@@ -64,8 +68,7 @@ export interface Label {
 
 export interface AppSettings {
   logo_image_path: string;
-  default_page_size: string;
-  default_page_orientation: 'portrait' | 'landscape';
+  language: 'en' | 'ro';
   company_name: string;
   company_phone: string;
   margin_top_mm: number;
@@ -79,12 +82,12 @@ export const PAGE_SIZES: Record<string, { width: number; height: number }> = {
   'A4': { width: 210, height: 297 },
   'A3': { width: 297, height: 420 },
   'Letter': { width: 215.9, height: 279.4 },
+  'Custom': { width: 210, height: 297 },
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
   logo_image_path: '',
-  default_page_size: 'A4',
-  default_page_orientation: 'portrait',
+  language: 'en',
   company_name: '',
   company_phone: '',
   margin_top_mm: 0,

@@ -2,6 +2,7 @@
   import { currentScreen, showSettingsModal } from '$lib/stores/uiStore';
   import { currentJob } from '$lib/stores/jobStore';
   import { theme, cycleTheme, resolvedTheme } from '$lib/stores/themeStore';
+  import { _ } from '$lib/stores/i18n';
   import Icon from './ui/Icon.svelte';
 
   export let onPrint: () => void = () => {};
@@ -43,7 +44,7 @@
       class:active={$currentScreen === 'jobs'}
       on:click={goToJobs}
     >
-      Jobs
+      {$_('nav.jobs')}
     </button>
 
     <button
@@ -51,12 +52,12 @@
       class:active={$currentScreen === 'templates'}
       on:click={goToTemplates}
     >
-      Templates
+      {$_('nav.templates')}
     </button>
   </nav>
 
   <div class="actions">
-    <button class="icon-btn" on:click={openSettings} title="Settings">
+    <button class="icon-btn" on:click={openSettings} title={$_('nav.settings')}>
       <Icon name="settings" size={18} />
     </button>
     <button
@@ -73,7 +74,7 @@
     {#if $currentScreen === 'editor' && $currentJob}
       <button class="print-btn" on:click={onPrint}>
         <Icon name="printer" size={16} />
-        Print PDF
+        {$_('topbar.print')}
       </button>
     {/if}
   </div>

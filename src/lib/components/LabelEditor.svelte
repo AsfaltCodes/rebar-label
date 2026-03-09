@@ -4,6 +4,7 @@
   import { settings } from '$lib/stores/settingsStore';
   import type { Segment } from '$lib/shapes/presets';
   import type { FieldDef } from '$lib/db/types';
+  import { _ } from '$lib/stores/i18n';
   import FieldInput from './FieldInput.svelte';
   import ShapeEditor from './ShapeEditor.svelte';
   import Icon from './ui/Icon.svelte';
@@ -67,27 +68,27 @@
 <div class="label-editor">
   {#if job && label}
     <div class="editor-header">
-      <span class="editor-title">Label #{label.sort_order + 1}</span>
+      <span class="editor-title">{$_('lbl_list.title').slice(0, -1)} #{label.sort_order + 1}</span>
       <span class="save-indicator" class:visible={$saveStatus !== 'idle'}>
         {#if $saveStatus === 'saving'}
-          Saving...
+          {$_('lbl_edit.saving')}
         {:else if $saveStatus === 'saved'}
-          <Icon name="check" size={12} /> Saved
+          <Icon name="check" size={12} /> {$_('lbl_edit.saved')}
         {:else if $saveStatus === 'error'}
-          Save failed
+          {$_('lbl_edit.save_failed')}
         {/if}
       </span>
     </div>
 
     {#if job.logo_enabled && !logoSrc}
-      <div class="warning-hint">Logo enabled but not uploaded — set in Settings.</div>
+      <div class="warning-hint">{$_('lbl_edit.logo_warn')}</div>
     {/if}
     {#if job.phone_enabled && !s.company_phone}
-      <div class="warning-hint">Phone enabled but not set — configure in Settings.</div>
+      <div class="warning-hint">{$_('lbl_edit.phone_warn')}</div>
     {/if}
 
     <div class="section">
-      <div class="section-header">Fields</div>
+      <div class="section-header">{$_('lbl_edit.fields_title')}</div>
       <div class="fields-list">
         {#each job.fields as field}
           <div class="field-wrapper">
@@ -97,7 +98,7 @@
                 value={fieldValues[field.label] || '—'}
                 readonly={true}
               />
-              <span class="computed-badge" title="Auto-calculated from shape segments">auto</span>
+              <span class="computed-badge" title="Auto-calculated">{$_('lbl_edit.auto_badge')}</span>
             {:else}
               <FieldInput
                 {field}
@@ -105,7 +106,7 @@
                 onChange={(v) => handleFieldChange(field, v)}
               />
               {#if isJobScoped(field)}
-                <span class="shared-badge" title="Shared across all labels in this job">shared</span>
+                <span class="shared-badge" title="Shared across all labels in this job">{$_('lbl_edit.shared_badge')}</span>
               {/if}
             {/if}
           </div>
@@ -121,14 +122,14 @@
       />
       {#if totalLength > 0}
         <div class="total-length">
-          Total Length: <strong>{totalLength} mm</strong>
+          {$_('lbl_edit.total_length')} <strong>{totalLength} mm</strong>
         </div>
       {/if}
     </div>
 
     <div class="section copies-section">
       <label class="copies-label">
-        Copies:
+        {$_('lbl_edit.copies')}
         <input
           type="number"
           class="copies-input"
@@ -141,13 +142,13 @@
     </div>
   {:else if job}
     <div class="empty-state">
-      <p>No label selected</p>
-      <p class="empty-hint">Select a label from the list or create a new one</p>
+      <p>{$_('lbl_edit.empty_no_label')}</p>
+      <p class="empty-hint">{$_('lbl_edit.empty_no_label_hint')}</p>
     </div>
   {:else}
     <div class="empty-state">
-      <p>No job open</p>
-      <p class="empty-hint">Create or open a job to start editing</p>
+      <p>{$_('lbl_edit.empty_no_job')}</p>
+      <p class="empty-hint">{$_('lbl_edit.empty_no_job_hint')}</p>
     </div>
   {/if}
 </div>

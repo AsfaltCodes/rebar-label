@@ -29,8 +29,8 @@
   // Adaptive zone flex values based on active zones
   $: showLogo = logoEnabled && logoSrc;
   $: showPhone = phoneEnabled && companyPhone;
-  $: logoFlex = showLogo ? (hasShape ? 12 : 15) + (showPhone ? 4 : 0) : (showPhone ? 6 : 0);
-  $: shapeFlex = hasShape ? (showLogo ? 38 : 40) : 0;
+  $: logoFlex = showLogo ? (hasShape ? 22 : 28) + (showPhone ? 12 : 0) : (showPhone ? 18 : 0);
+  $: shapeFlex = hasShape ? (showLogo ? 35 : 40) : 0;
   $: fieldsFlex = 100 - logoFlex - shapeFlex;
 
   // Total length from shape segments
@@ -98,7 +98,7 @@
         <img src={logoSrc} alt="Logo" class="logo-img" />
       {/if}
       {#if showPhone}
-        <span class="phone-text" style="font-size:{Math.max(4, baseFontPx * 0.75)}px">{companyPhone}</span>
+        <span class="phone-text" style="font-size:{Math.max(6, baseFontPx * 1.1)}px">{companyPhone}</span>
       {/if}
     </div>
   {/if}
@@ -156,7 +156,7 @@
   {/if}
 
   {#if labelNumber !== null}
-    <div class="label-counter" style="font-size:{Math.max(4, baseFontPx * 0.7)}px">{labelNumber}</div>
+    <div class="label-counter" style="font-size:{Math.max(8, baseFontPx * 1.2)}px">{labelNumber}</div>
   {/if}
 </div>
 
@@ -193,12 +193,14 @@
     min-height: 0;
   }
   .logo-img {
-    max-height: 100%;
-    max-width: 80%;
+    flex: 1;
+    max-height: 70%;
+    max-width: 85%;
     object-fit: contain;
   }
   .phone-text {
-    color: var(--color-text-muted);
+    color: var(--color-text);
+    font-weight: 700;
     text-align: center;
     line-height: 1;
     white-space: nowrap;
@@ -260,12 +262,12 @@
   }
   .label-counter {
     position: absolute;
-    bottom: 1px;
-    right: 3px;
-    color: var(--color-text-faint);
-    font-weight: 600;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--color-text);
+    font-weight: 400;
     font-variant-numeric: tabular-nums;
     pointer-events: none;
-    opacity: 0.6;
   }
 </style>

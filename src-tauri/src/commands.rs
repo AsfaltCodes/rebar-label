@@ -19,6 +19,10 @@ fn row_to_template(row: &rusqlite::Row) -> rusqlite::Result<Value> {
         "columns": row.get::<_, i32>(9).unwrap_or(2),
         "rows": row.get::<_, i32>(10).unwrap_or(5),
         "phone_enabled": row.get::<_, i32>(11).unwrap_or(0) != 0,
+        "page_size": row.get::<_, String>(12).unwrap_or_else(|_| "A4".to_string()),
+        "page_width_mm": row.get::<_, f64>(13).unwrap_or(210.0),
+        "page_height_mm": row.get::<_, f64>(14).unwrap_or(297.0),
+        "page_orientation": row.get::<_, String>(15).unwrap_or_else(|_| "portrait".to_string()),
     }))
 }
 
@@ -65,7 +69,7 @@ fn row_to_label(row: &rusqlite::Row) -> rusqlite::Result<Value> {
 pub fn list_templates(db: State<AppDb>) -> Result<Vec<Value>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
-        .prepare("SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled FROM templates ORDER BY updated_at DESC")
+        .prepare("SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled, page_size, page_width_mm, page_height_mm, page_orientation FROM templates ORDER BY updated_at DESC")
         .map_err(|e| e.to_string())?;
     let rows = stmt
         .query_map([], |row| row_to_template(row))
@@ -77,7 +81,7 @@ pub fn list_templates(db: State<AppDb>) -> Result<Vec<Value>, String> {
 pub fn get_template(db: State<AppDb>, id: i64) -> Result<Value, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     conn.query_row(
-        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled FROM templates WHERE id = ?1",
+        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled, page_size, page_width_mm, page_height_mm, page_orientation FROM templates WHERE id = ?1",
         params![id],
         |row| row_to_template(row),
     ).map_err(|e| e.to_string())
@@ -95,20 +99,28 @@ pub fn create_template(
     columns: Option<i32>,
     rows: Option<i32>,
     phone_enabled: Option<bool>,
+    page_size: Option<String>,
+    page_width_mm: Option<f64>,
+    page_height_mm: Option<f64>,
+    page_orientation: Option<String>,
 ) -> Result<Value, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let sm = sizing_mode.unwrap_or_else(|| "grid".to_string());
     let cols = columns.unwrap_or(2);
     let rws = rows.unwrap_or(5);
     let pe = phone_enabled.unwrap_or(false) as i32;
+    let ps = page_size.unwrap_or_else(|| "A4".to_string());
+    let pw = page_width_mm.unwrap_or(210.0);
+    let ph = page_height_mm.unwrap_or(297.0);
+    let po = page_orientation.unwrap_or_else(|| "portrait".to_string());
 
     conn.execute(
-        "INSERT INTO templates (name, label_width_mm, label_height_mm, logo_enabled, fields, sizing_mode, columns, rows, phone_enabled) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-        params![name, label_width_mm, label_height_mm, logo_enabled as i32, fields, sm, cols, rws, pe],
+        "INSERT INTO templates (name, label_width_mm, label_height_mm, logo_enabled, fields, sizing_mode, columns, rows, phone_enabled, page_size, page_width_mm, page_height_mm, page_orientation) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+        params![name, label_width_mm, label_height_mm, logo_enabled as i32, fields, sm, cols, rws, pe, ps, pw, ph, po],
     ).map_err(|e| e.to_string())?;
     let id = conn.last_insert_rowid();
     conn.query_row(
-        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled FROM templates WHERE id = ?1",
+        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled, page_size, page_width_mm, page_height_mm, page_orientation FROM templates WHERE id = ?1",
         params![id],
         |row| row_to_template(row),
     ).map_err(|e| e.to_string())
@@ -127,6 +139,10 @@ pub fn update_template(
     columns: Option<i32>,
     rows: Option<i32>,
     phone_enabled: Option<bool>,
+    page_size: Option<String>,
+    page_width_mm: Option<f64>,
+    page_height_mm: Option<f64>,
+    page_orientation: Option<String>,
 ) -> Result<Value, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     // Build dynamic SET clause
@@ -142,6 +158,10 @@ pub fn update_template(
     if let Some(v) = columns { sets.push(format!("columns = ?{}", values.len() + 1)); values.push(Box::new(v)); }
     if let Some(v) = rows { sets.push(format!("rows = ?{}", values.len() + 1)); values.push(Box::new(v)); }
     if let Some(v) = phone_enabled { sets.push(format!("phone_enabled = ?{}", values.len() + 1)); values.push(Box::new(v as i32)); }
+    if let Some(v) = page_size { sets.push(format!("page_size = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = page_width_mm { sets.push(format!("page_width_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = page_height_mm { sets.push(format!("page_height_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = page_orientation { sets.push(format!("page_orientation = ?{}", values.len() + 1)); values.push(Box::new(v)); }
 
     let id_param_idx = values.len() + 1;
     values.push(Box::new(id));
@@ -151,7 +171,7 @@ pub fn update_template(
     conn.execute(&sql, param_refs.as_slice()).map_err(|e| e.to_string())?;
 
     conn.query_row(
-        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled FROM templates WHERE id = ?1",
+        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled, page_size, page_width_mm, page_height_mm, page_orientation FROM templates WHERE id = ?1",
         params![id],
         |row| row_to_template(row),
     ).map_err(|e| e.to_string())

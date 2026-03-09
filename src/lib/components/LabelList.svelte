@@ -2,6 +2,7 @@
   import { currentJob, labels, selectedLabelId, selectedLabelIds, createNewLabel, deleteLabels, duplicateLabel, updateLabelById } from '$lib/stores/jobStore';
   import { PRESET_LABELS, type PresetName } from '$lib/shapes/presets';
   import { addToast } from '$lib/stores/toastStore';
+  import { _ } from '$lib/stores/i18n';
   import Icon from './ui/Icon.svelte';
   import Button from './ui/Button.svelte';
 
@@ -75,7 +76,6 @@
     }
   }
 
-  /** Get a display name for a label: first non-empty field value, or "Label #N" */
   function getLabelName(label: any, index: number): string {
     if (job && job.fields.length > 0) {
       for (const field of job.fields) {
@@ -86,7 +86,6 @@
     return `Label ${index + 1}`;
   }
 
-  /** Get a one-line summary of key field values (up to 3, skip the first used as name) */
   function getLabelSummary(label: any): string {
     if (!job) return '';
     const parts: string[] = [];
@@ -97,7 +96,7 @@
       if (val && val.trim()) {
         if (!skippedFirst) {
           skippedFirst = true;
-          continue; // skip the first — it's already shown as the name
+          continue;
         }
         parts.push(val.trim());
       }
@@ -105,10 +104,11 @@
     return parts.join(' \u00B7 ');
   }
 
-  /** Get human-readable shape preset name */
   function getShapeName(label: any): string {
     if (!label.shape_preset || !label.shape_segments?.length) return '';
-    return PRESET_LABELS[label.shape_preset as PresetName] || label.shape_preset;
+    const key = 'shape.preset_' + label.shape_preset;
+    const translated = $_(key);
+    return translated !== key ? translated : label.shape_preset;
   }
 </script>
 
@@ -116,18 +116,18 @@
 
 <div class="label-list">
   <div class="list-header">
-    <span class="list-title">Labels</span>
+    <span class="list-title">{$_('lbl_list.title')}</span>
     <span class="list-count">{allLabels.length}</span>
   </div>
 
   <div class="list-actions">
     <Button size="sm" variant="primary" on:click={handleNew} disabled={!job}>
       <Icon name="plus" size={14} />
-      New
+      {$_('lbl_list.new')}
     </Button>
     <Button size="sm" variant="secondary" on:click={handleDuplicate} disabled={selId === null}>
       <Icon name="copy" size={14} />
-      Dupe
+      {$_('lbl_list.dupe')}
     </Button>
   </div>
 
@@ -135,10 +135,10 @@
     {#if allLabels.length === 0}
       <div class="empty">
         {#if job}
-          <p>No labels yet</p>
-          <p class="empty-hint">Click "New" to create one</p>
+          <p>{$_('lbl_list.empty')}</p>
+          <p class="empty-hint">{$_('lbl_list.empty_hint')}</p>
         {:else}
-          <p>No job open</p>
+          <p>{$_('lbl_list.no_job')}</p>
         {/if}
       </div>
     {:else}
@@ -169,7 +169,7 @@
             <button
               class="delete-btn"
               on:click|stopPropagation={() => performDelete(label.id)}
-              title="Delete label"
+              title={$_('common.delete')}
             >
               <Icon name="trash" size={13} />
             </button>

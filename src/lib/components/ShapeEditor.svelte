@@ -2,6 +2,7 @@
   import type { Segment } from '$lib/shapes/presets';
   import { type PresetName, PRESET_LABELS, getPresetSegments } from '$lib/shapes/presets';
   import ShapePreview from './ShapePreview.svelte';
+  import { _ } from '$lib/stores/i18n';
 
   export let shapePreset: string | null = null;
   export let segments: Segment[] = [];
@@ -35,6 +36,17 @@
     onChange(shapePreset, segments);
   }
 
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const inputs = Array.from(document.querySelectorAll('.seg-input')) as HTMLElement[];
+      const currentIndex = inputs.indexOf(e.target as HTMLElement);
+      if (currentIndex !== -1 && currentIndex < inputs.length - 1) {
+        inputs[currentIndex + 1].focus();
+      }
+    }
+  }
+
   function toggleNoShape() {
     if (!noShape) {
       // Currently has shape → clear it (noShape will recompute to true)
@@ -48,34 +60,23 @@
       onChange(null, segments);
     }
   }
-
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const inputs = Array.from(document.querySelectorAll('.seg-input')) as HTMLElement[];
-      const currentIndex = inputs.indexOf(e.target as HTMLElement);
-      if (currentIndex !== -1 && currentIndex < inputs.length - 1) {
-        inputs[currentIndex + 1].focus();
-      }
-    }
-  }
 </script>
 
 <div class="shape-editor">
-  <div class="section-header">Shape</div>
+  <div class="section-header">{$_('lbl_edit.shape_title')}</div>
 
   <label class="no-shape-toggle">
     <input type="checkbox" checked={noShape} on:change={toggleNoShape} />
-    No shape
+    {$_('shape.no_shape')}
   </label>
 
   {#if !noShape}
     <div class="preset-row">
       <label>
-        Preset:
+        {$_('shape.preset')}
         <select value={shapePreset || 'custom'} on:change={handlePresetChange}>
           {#each presetNames as p}
-            <option value={p}>{PRESET_LABELS[p]}</option>
+            <option value={p}>{$_('shape.preset_' + p)}</option>
           {/each}
         </select>
       </label>
@@ -84,7 +85,7 @@
     <ShapePreview {segments} width={300} height={180} />
 
     <div class="segments-list">
-      <div class="seg-header">Segments:</div>
+      <div class="seg-header">{$_('shape.segments')}</div>
       {#each segments as seg, i}
         <div class="seg-row">
           <span class="seg-num">{i + 1}:</span>
@@ -109,11 +110,11 @@
           />
           <span class="seg-unit">deg</span>
           {#if segments.length > 1}
-            <button class="seg-remove" on:click={() => removeSegment(i)} title="Remove segment">&times;</button>
+            <button class="seg-remove" on:click={() => removeSegment(i)} title={$_('common.remove')}>&times;</button>
           {/if}
         </div>
       {/each}
-      <button class="add-seg" on:click={addSegment}>+ Add Segment</button>
+      <button class="add-seg" on:click={addSegment}>{$_('shape.add_segment')}</button>
     </div>
   {/if}
 </div>

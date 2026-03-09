@@ -27,6 +27,8 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "publisher": "Chira Matei",
+    "shortDescription": "Desktop application for creating and printing rebar labels.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

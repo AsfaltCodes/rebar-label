@@ -158,6 +158,10 @@ class TauriDB {
       labelHeightMm: data.label_height_mm,
       logoEnabled: data.logo_enabled,
       phoneEnabled: data.phone_enabled || false,
+      pageSize: data.page_size || 'A4',
+      pageWidthMm: data.page_width_mm || 210,
+      pageHeightMm: data.page_height_mm || 297,
+      pageOrientation: data.page_orientation || 'portrait',
       fields: JSON.stringify(data.fields),
     });
     return { ...raw, fields: JSON.parse(raw.fields || '[]') };

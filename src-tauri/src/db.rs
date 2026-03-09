@@ -80,6 +80,12 @@ impl AppDb {
         conn.execute("ALTER TABLE templates ADD COLUMN columns INTEGER NOT NULL DEFAULT 2", []).ok();
         conn.execute("ALTER TABLE templates ADD COLUMN rows INTEGER NOT NULL DEFAULT 5", []).ok();
         conn.execute("ALTER TABLE templates ADD COLUMN phone_enabled INTEGER NOT NULL DEFAULT 0", []).ok();
+        
+        // Add template page config columns
+        conn.execute("ALTER TABLE templates ADD COLUMN page_size TEXT NOT NULL DEFAULT 'A4'", []).ok();
+        conn.execute("ALTER TABLE templates ADD COLUMN page_width_mm REAL NOT NULL DEFAULT 210", []).ok();
+        conn.execute("ALTER TABLE templates ADD COLUMN page_height_mm REAL NOT NULL DEFAULT 297", []).ok();
+        conn.execute("ALTER TABLE templates ADD COLUMN page_orientation TEXT NOT NULL DEFAULT 'portrait'", []).ok();
 
         conn.execute("ALTER TABLE jobs ADD COLUMN sizing_mode TEXT NOT NULL DEFAULT 'grid'", []).ok();
         conn.execute("ALTER TABLE jobs ADD COLUMN columns INTEGER NOT NULL DEFAULT 2", []).ok();

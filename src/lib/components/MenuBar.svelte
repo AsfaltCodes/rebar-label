@@ -2,6 +2,7 @@
   import { currentScreen, showNewJobModal, showSettingsModal } from '$lib/stores/uiStore';
   import { currentJob, selectedLabelId, createNewLabel, duplicateLabel, deleteLabel } from '$lib/stores/jobStore';
   import { theme, setTheme } from '$lib/stores/themeStore';
+  import { _ } from '$lib/stores/i18n';
   import Icon from './ui/Icon.svelte';
 
   export let jobs: { id: number; name: string; created_at: string; labelCount: number }[] = [];
@@ -21,20 +22,21 @@
 
   let openMenuIndex: number | null = null;
 
-  $: menus = buildMenus($currentJob, $selectedLabelId, $currentScreen, $theme, jobs);
+  $: menus = buildMenus($currentJob, $selectedLabelId, $currentScreen, $theme, jobs, $_);
 
   function buildMenus(
     job: typeof $currentJob,
     selId: typeof $selectedLabelId,
     screen: typeof $currentScreen,
     currentTheme: typeof $theme,
-    allJobs: typeof jobs
+    allJobs: typeof jobs,
+    t: typeof $_
   ) {
     return [
       {
         label: 'File',
         items: [
-          { label: 'New Job', shortcut: 'Ctrl+N', action: () => showNewJobModal.set(true) },
+          { label: t('jobs.new_job'), shortcut: 'Ctrl+N', action: () => showNewJobModal.set(true) },
           { label: 'Open Job', submenu: allJobs.length > 0
             ? allJobs.map(j => ({
                 label: j.name,
@@ -44,9 +46,9 @@
             : [{ label: '(no jobs)', disabled: true }]
           },
           { separator: true } as MenuItem,
-          { label: 'Print PDF', shortcut: 'Ctrl+P', action: () => onPrint(), disabled: !job },
+          { label: t('topbar.print'), shortcut: 'Ctrl+P', action: () => onPrint(), disabled: !job },
           { separator: true } as MenuItem,
-          { label: 'Settings', action: () => showSettingsModal.set(true) },
+          { label: t('nav.settings'), action: () => showSettingsModal.set(true) },
           { separator: true } as MenuItem,
           { label: 'Exit', action: () => window.close() },
         ] as MenuItem[],
@@ -63,8 +65,8 @@
         label: 'View',
         items: [
           { label: 'Editor', action: () => currentScreen.set('editor'), checked: screen === 'editor' },
-          { label: 'Jobs', action: () => currentScreen.set('jobs'), checked: screen === 'jobs' },
-          { label: 'Templates', action: () => currentScreen.set('templates'), checked: screen === 'templates' },
+          { label: t('nav.jobs'), action: () => currentScreen.set('jobs'), checked: screen === 'jobs' },
+          { label: t('nav.templates'), action: () => currentScreen.set('templates'), checked: screen === 'templates' },
           { separator: true } as MenuItem,
           { label: 'Theme', submenu: [
             { label: 'System', action: () => setTheme('system'), checked: currentTheme === 'system' },

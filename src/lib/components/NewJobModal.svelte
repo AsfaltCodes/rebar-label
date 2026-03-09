@@ -4,6 +4,7 @@
   import { settings } from '$lib/stores/settingsStore';
   import { showNewJobModal, currentScreen } from '$lib/stores/uiStore';
   import { addToast } from '$lib/stores/toastStore';
+  import { _ } from '$lib/stores/i18n';
   import { generateJobName } from '$lib/utils/sessionName';
   import Icon from './ui/Icon.svelte';
   import Button from './ui/Button.svelte';
@@ -47,11 +48,10 @@
     try {
       const { db } = await import('$lib/db/api');
 
-      const pageSize = $settings.default_page_size || 'A4';
-      const orientation = $settings.default_page_orientation || 'portrait';
-      const dims = PAGE_SIZES[pageSize] || PAGE_SIZES['A4'];
-      const effectiveWidth = orientation === 'landscape' ? dims.height : dims.width;
-      const effectiveHeight = orientation === 'landscape' ? dims.width : dims.height;
+      const page_size = selectedTemplate?.page_size || 'A4';
+      const page_width_mm = selectedTemplate?.page_width_mm || 210;
+      const page_height_mm = selectedTemplate?.page_height_mm || 297;
+      const page_orientation = selectedTemplate?.page_orientation || 'portrait';
 
       const fields = selectedTemplate ? [...selectedTemplate.fields] : [];
 
@@ -69,10 +69,10 @@
         label_height_mm: selectedTemplate?.label_height_mm || 50,
         logo_enabled: selectedTemplate?.logo_enabled || false,
         phone_enabled: selectedTemplate?.phone_enabled || false,
-        page_size: pageSize,
-        page_width_mm: effectiveWidth,
-        page_height_mm: effectiveHeight,
-        page_orientation: orientation,
+        page_size,
+        page_width_mm,
+        page_height_mm,
+        page_orientation,
       });
 
       // Create first blank label
@@ -113,7 +113,7 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="overlay" on:click|self={handleCancel}>
     <div class="modal">
-      <h3>New Job</h3>
+      <h3>{$_('newjob.title')}</h3>
 
       <!-- Auto-generated name, click to edit -->
       <div class="name-row">
@@ -136,13 +136,13 @@
 
       <!-- Client name -->
       <div class="form-group">
-        <label>Client Name (optional)</label>
+        <label>{$_('newjob.client_label')}</label>
         <input type="text" bind:value={clientName} placeholder="e.g. ABC Construction" />
       </div>
 
       {#if templates.length > 0}
         <div class="form-group">
-          <label>Template</label>
+          <label>{$_('newjob.template_label')}</label>
           <select bind:value={selectedTemplateId}>
             {#each templates as t}
               <option value={t.id}>{t.name} ({t.sizing_mode === 'grid' ? `${t.columns}×${t.rows} grid` : `${t.label_width_mm}×${t.label_height_mm}mm`}, {t.fields.length} fields)</option>
@@ -151,17 +151,17 @@
         </div>
 
         <div class="form-actions">
-          <Button variant="primary" on:click={handleCreate}>Create Job</Button>
-          <Button variant="ghost" on:click={handleCancel}>Cancel</Button>
+          <Button variant="primary" on:click={handleCreate}>{$_('newjob.create_btn')}</Button>
+          <Button variant="ghost" on:click={handleCancel}>{$_('modal.cancel')}</Button>
         </div>
       {:else}
         <div class="empty-templates">
-          <p class="hint">You need a template to define label fields and dimensions.</p>
+          <p class="hint">{$_('newjob.empty_hint')}</p>
           <Button variant="primary" on:click={goToTemplates}>
             <Icon name="plus" size={14} />
-            Create a Template
+            {$_('newjob.create_template_btn')}
           </Button>
-          <Button variant="ghost" on:click={handleCancel}>Cancel</Button>
+          <Button variant="ghost" on:click={handleCancel}>{$_('modal.cancel')}</Button>
         </div>
       {/if}
     </div>

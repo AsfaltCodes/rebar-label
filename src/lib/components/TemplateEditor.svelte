@@ -3,6 +3,7 @@
   import { PAGE_SIZES } from '$lib/db/types';
   import { settings, updateSettings } from '$lib/stores/settingsStore';
   import { calculateLabelDimensions } from '$lib/utils/labelDimensions';
+  import { _ } from '$lib/stores/i18n';
   import LabelCard from './LabelCard.svelte';
   import Icon from './ui/Icon.svelte';
 
@@ -15,6 +16,10 @@
     label_height_mm: 50,
     logo_enabled: false,
     phone_enabled: false,
+    page_size: 'A4',
+    page_width_mm: 210,
+    page_height_mm: 297,
+    page_orientation: 'portrait',
     fields: [],
   };
   export let onSave: (data: Partial<Template>) => void = () => {};
@@ -28,24 +33,42 @@
   let height = template.label_height_mm || 50;
   let logoEnabled = template.logo_enabled || false;
   let phoneEnabled = template.phone_enabled || false;
+  let pageSize = template.page_size || 'A4';
+  let pageOrientation = template.page_orientation || 'portrait';
+  let pageWidth = template.page_width_mm || 210;
+  let pageHeight = template.page_height_mm || 297;
   let fields: FieldDef[] = template.fields ? [...template.fields] : [];
 
   $: logoSrc = $settings.logo_image_path || null;
   $: s = $settings;
 
-  // Preview label dimensions — compute from grid or use fixed
-  $: previewDims = sizingMode === 'grid'
-    ? calculateLabelDimensions(
-        PAGE_SIZES[s.default_page_size || 'A4']?.width || 210,
-        PAGE_SIZES[s.default_page_size || 'A4']?.height || 297,
-        s.margin_top_mm, s.margin_bottom_mm,
-        s.margin_left_mm, s.margin_right_mm,
-        s.label_gap_mm, columns, rows
-      )
-    : { width, height };
+  // Reactively calculate effective page dimensions
+  $: {
+    if (pageSize !== 'Custom') {
+      const standard = PAGE_SIZES[pageSize];
+      if (standard) {
+        pageWidth = standard.width;
+        pageHeight = standard.height;
+      }
+    }
+  }
 
-  $: previewW = previewDims.width;
-  $: previewH = previewDims.height;
+  $: effectivePageW = pageOrientation === 'landscape' ? Math.max(pageWidth, pageHeight) : Math.min(pageWidth, pageHeight);
+  $: effectivePageH = pageOrientation === 'landscape' ? Math.min(pageWidth, pageHeight) : Math.max(pageWidth, pageHeight);
+
+  // Preview label dimensions — compute from grid or use fixed
+  $: previewDims = sizingMode === 'grid' && columns > 0 && rows > 0
+    ? calculateLabelDimensions(
+        effectivePageW || 210,
+        effectivePageH || 297,
+        s.margin_top_mm || 0, s.margin_bottom_mm || 0,
+        s.margin_left_mm || 0, s.margin_right_mm || 0,
+        s.label_gap_mm || 0, columns, rows
+      )
+    : { width: Math.max(width, 1), height: Math.max(height, 1) };
+
+  $: previewW = Math.max(previewDims.width, 1);
+  $: previewH = Math.max(previewDims.height, 1);
 
   // Scale to fit ~360px wide preview area
   $: previewScale = Math.min(360 / previewW, 450 / previewH, 4);
@@ -111,6 +134,10 @@
       label_height_mm: height,
       logo_enabled: logoEnabled,
       phone_enabled: phoneEnabled,
+      page_size: pageSize,
+      page_width_mm: effectivePageW,
+      page_height_mm: effectivePageH,
+      page_orientation: pageOrientation,
       fields,
     });
   }
@@ -118,43 +145,78 @@
 
 <div class="template-editor">
   <div class="editor-form">
-    <h3>{template.id ? 'Edit Template' : 'New Template'}</h3>
+    <h3>{template.id ? $_('tpl_edit.edit_title') : $_('tpl_edit.new_title')}</h3>
 
     <div class="form-group">
-      <label>Template Name</label>
-      <input type="text" bind:value={name} placeholder="e.g. Standard Stirrup Label" />
+      <label>{$_('tpl_edit.name_label')}</label>
+      <input type="text" bind:value={name} placeholder={$_('tpl_edit.name_placeholder')} />
+    </div>
+
+    <!-- Page Setup -->
+    <div class="section">
+      <h4>{$_('tpl_edit.page_setup')}</h4>
+      <div class="form-row">
+        <div class="form-group">
+          <label>{$_('tpl_edit.page_size')}</label>
+          <select bind:value={pageSize}>
+            {#each Object.keys(PAGE_SIZES) as size}
+              <option value={size}>{size}</option>
+            {/each}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>{$_('tpl_edit.orientation')}</label>
+          <select bind:value={pageOrientation}>
+            <option value="portrait">{$_('tpl_edit.portrait')}</option>
+            <option value="landscape">{$_('tpl_edit.landscape')}</option>
+          </select>
+        </div>
+      </div>
+      
+      {#if pageSize === 'Custom'}
+        <div class="form-row">
+          <div class="form-group">
+            <label>{$_('tpl_edit.page_w')}</label>
+            <input type="number" bind:value={pageWidth} min="50" max="1000" step="1" />
+          </div>
+          <div class="form-group">
+            <label>{$_('tpl_edit.page_h')}</label>
+            <input type="number" bind:value={pageHeight} min="50" max="1000" step="1" />
+          </div>
+        </div>
+      {/if}
     </div>
 
     <!-- Label Sizing -->
     <div class="section">
-      <h4>Label Size</h4>
+      <h4>{$_('tpl_edit.label_size')}</h4>
       <div class="form-group">
         <label class="checkbox-label">
           <input type="checkbox" checked={sizingMode === 'fixed'} on:change={() => sizingMode = sizingMode === 'grid' ? 'fixed' : 'grid'} />
-          Custom label dimensions (mm)
+          {$_('tpl_edit.custom_dims')}
         </label>
       </div>
 
       {#if sizingMode === 'grid'}
         <div class="form-row">
           <div class="form-group">
-            <label>Columns</label>
+            <label>{$_('tpl_edit.columns')}</label>
             <input type="number" bind:value={columns} min="1" max="20" step="1" />
           </div>
           <div class="form-group">
-            <label>Rows</label>
+            <label>{$_('tpl_edit.rows')}</label>
             <input type="number" bind:value={rows} min="1" max="20" step="1" />
           </div>
         </div>
-        <p class="hint">Labels will auto-size to fill the page in a {columns}&times;{rows} grid.</p>
+        <p class="hint">{$_('tpl_edit.auto_size_hint', { cols: columns, rows: rows })}</p>
       {:else}
         <div class="form-row">
           <div class="form-group">
-            <label>Width (mm)</label>
+            <label>{$_('tpl_edit.width')}</label>
             <input type="number" bind:value={width} min="20" max="500" step="5" />
           </div>
           <div class="form-group">
-            <label>Height (mm)</label>
+            <label>{$_('tpl_edit.height')}</label>
             <input type="number" bind:value={height} min="20" max="500" step="5" />
           </div>
         </div>
@@ -163,11 +225,11 @@
 
     <!-- Branding -->
     <div class="section">
-      <h4>Branding</h4>
+      <h4>{$_('tpl_edit.branding')}</h4>
       <div class="form-group">
         <label class="checkbox-label">
           <input type="checkbox" bind:checked={logoEnabled} />
-          Show logo on labels
+          {$_('tpl_edit.show_logo')}
         </label>
       </div>
 
@@ -176,12 +238,12 @@
           {#if logoSrc}
             <div class="logo-preview">
               <img src={logoSrc} alt="Logo" />
-              <button class="logo-remove" on:click={clearLogo} title="Remove logo">
+              <button class="logo-remove" on:click={clearLogo} title={$_('common.remove')}>
                 <Icon name="trash" size={13} />
               </button>
             </div>
           {:else}
-            <p class="hint">No logo uploaded yet.</p>
+            <p class="hint">{$_('tpl_edit.no_logo_hint')}</p>
           {/if}
           <input type="file" accept="image/*" on:change={handleLogoUpload} class="file-input" />
         </div>
@@ -190,10 +252,10 @@
       <div class="form-group">
         <label class="checkbox-label">
           <input type="checkbox" bind:checked={phoneEnabled} />
-          Show phone number under logo
+          {$_('tpl_edit.show_phone')}
         </label>
         {#if phoneEnabled}
-          <p class="hint">Company phone is set in Settings.</p>
+          <p class="hint">{$_('tpl_edit.phone_hint')}</p>
         {/if}
       </div>
     </div>
@@ -201,12 +263,12 @@
     <!-- Fields -->
     <div class="fields-section">
       <div class="fields-header">
-        <h4>Fields</h4>
-        <button class="add-field-btn" on:click={addField}>+ Add Field</button>
+        <h4>{$_('tpl_edit.fields')}</h4>
+        <button class="add-field-btn" on:click={addField}>{$_('tpl_edit.add_field')}</button>
       </div>
 
       {#if fields.length === 0}
-        <p class="empty-fields">No fields yet. Click "Add Field" to define label content.</p>
+        <p class="empty-fields">{$_('tpl_edit.empty_fields')}</p>
       {/if}
 
       {#each fields as field, i}
@@ -219,7 +281,7 @@
             <input
               type="text"
               class="field-name-input"
-              placeholder="Field name (e.g. Client)"
+              placeholder={$_('tpl_edit.field_name_ph')}
               bind:value={field.label}
             />
             <select bind:value={field.field_type}>
@@ -229,7 +291,7 @@
             <input
               type="text"
               class="field-default-input"
-              placeholder="Default value"
+              placeholder={$_('tpl_edit.field_default_ph')}
               bind:value={field.default_value}
             />
             <select bind:value={field.font_size} title="Font size">
@@ -261,15 +323,15 @@
     </div>
 
     <div class="form-actions">
-      <button class="btn btn-save" on:click={handleSave} disabled={!name.trim()}>Save</button>
-      <button class="btn btn-cancel" on:click={onCancel}>Cancel</button>
+      <button class="btn btn-save" on:click={handleSave} disabled={!name.trim()}>{$_('common.save')}</button>
+      <button class="btn btn-cancel" on:click={onCancel}>{$_('common.cancel')}</button>
     </div>
   </div>
 
   <!-- Live preview sidebar -->
   <div class="preview-sidebar">
-    <h4>Label Preview</h4>
-    <div class="preview-card-wrapper">
+    <h4>{$_('tpl_edit.preview_title')}</h4>
+    <div class="preview-card-wrapper" style="aspect-ratio: {Math.max(effectivePageW, 1)} / {Math.max(effectivePageH, 1)}">
       <LabelCard
         label={sampleLabel}
         {fields}
@@ -359,7 +421,8 @@
     margin-bottom: var(--space-1);
   }
   .form-group input[type="text"],
-  .form-group input[type="number"] {
+  .form-group input[type="number"],
+  .form-group select {
     width: 100%;
     padding: var(--space-3) var(--space-4);
     border: 1px solid var(--color-input-border);
