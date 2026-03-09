@@ -139,7 +139,7 @@
           stroke-linejoin="round"
         />
         {#each shapeData.segmentMidpoints as mp}
-          {@const perpRad = ((mp.angle - 90) * Math.PI) / 180}
+          {@const perpRad = (mp.labelOffsetAngle * Math.PI) / 180}
           {@const offsetDist = boundsSpan * 0.08}
           <text
             x={mp.x + Math.cos(perpRad) * offsetDist}
@@ -155,9 +155,6 @@
     </div>
   {/if}
 
-  {#if labelNumber !== null}
-    <div class="label-counter" style="font-size:{Math.max(8, baseFontPx * 1.2)}px">{labelNumber}</div>
-  {/if}
 </div>
 
 <style>
@@ -259,15 +256,5 @@
     padding: 2px;
     overflow: hidden;
     min-height: 0;
-  }
-  .label-counter {
-    position: absolute;
-    bottom: 2px;
-    left: 50%;
-    transform: translateX(-50%);
-    color: var(--color-text);
-    font-weight: 400;
-    font-variant-numeric: tabular-nums;
-    pointer-events: none;
   }
 </style>

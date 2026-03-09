@@ -51,6 +51,17 @@
     ? layout.positions.filter(p => p.page === page)
     : [];
 
+  // Auto-navigate to the page containing the selected label
+  $: if (layout && $selectedLabelId !== null) {
+    const labelIdx = allLabels.findIndex(l => l.id === $selectedLabelId);
+    if (labelIdx >= 0) {
+      const pos = layout.positions.find(p => p.labelIndex === labelIdx);
+      if (pos && pos.page !== page) {
+        currentPage.set(pos.page);
+      }
+    }
+  }
+
   let lastSelectedIdx = 0;
 
   function handleSelectLabel(e: MouseEvent, labelIndex: number) {
@@ -135,7 +146,7 @@
                 logoEnabled={job.logo_enabled}
                 phoneEnabled={job.phone_enabled}
                 companyPhone={s.company_phone}
-                labelNumber={pos.globalIndex + 1}
+                labelNumber={null}
                 clientName={job.client_name || ''}
                 on:click={(e) => handleSelectLabel(e, pos.labelIndex)}
                 on:contextmenu={(e) => handleContextMenu(e, pos.labelIndex)}

@@ -267,7 +267,7 @@ function drawLabel(
         doc.setFontSize(5);
         doc.setTextColor(120);
         for (const mp of renderData.segmentMidpoints) {
-          const perpRad = ((mp.angle - 90) * Math.PI) / 180;
+          const perpRad = (mp.labelOffsetAngle * Math.PI) / 180;
           const offsetD = Math.max(boundsW, boundsH) * 0.08;
           doc.text(
             String(mp.length),

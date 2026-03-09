@@ -22,7 +22,7 @@
     />
     {#each renderData.segmentMidpoints as mp}
       {@const boundsSpan = Math.max(renderData.bounds.maxX - renderData.bounds.minX, renderData.bounds.maxY - renderData.bounds.minY)}
-      {@const perpRad = ((mp.angle - 90) * Math.PI) / 180}
+      {@const perpRad = (mp.labelOffsetAngle * Math.PI) / 180}
       {@const offsetDist = boundsSpan * 0.08}
       <text
         x={mp.x + Math.cos(perpRad) * offsetDist}

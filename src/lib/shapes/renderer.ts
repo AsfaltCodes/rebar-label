@@ -9,7 +9,7 @@ export interface ShapeRenderData {
   pathD: string;           // SVG path d attribute
   points: Point[];         // All vertices
   bounds: { minX: number; minY: number; maxX: number; maxY: number };
-  segmentMidpoints: { x: number; y: number; length: number; angle: number }[]; // For dimension labels
+  segmentMidpoints: { x: number; y: number; length: number; angle: number; labelOffsetAngle: number }[];
   isClosed: boolean;
 }
 
@@ -38,7 +38,7 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
 
     const midX = x + dx / 2;
     const midY = y + dy / 2;
-    segmentMidpoints.push({ x: midX, y: midY, length: seg.length, angle: currentAngle });
+    segmentMidpoints.push({ x: midX, y: midY, length: seg.length, angle: currentAngle, labelOffsetAngle: currentAngle - 90 });
 
     x += dx;
     y += dy;
@@ -51,6 +51,26 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
   const dist = Math.sqrt((last.x - first.x) ** 2 + (last.y - first.y) ** 2);
   const maxLen = Math.max(...segments.map(s => s.length), 1);
   const isClosed = dist < maxLen * 0.05; // Within 5% of max segment length
+
+  // For closed shapes, flip label offsets that point toward the interior
+  if (isClosed && points.length > 2) {
+    // Centroid of unique vertices (exclude duplicate closing point)
+    const unique = points.slice(0, -1);
+    const cx = unique.reduce((s, p) => s + p.x, 0) / unique.length;
+    const cy = unique.reduce((s, p) => s + p.y, 0) / unique.length;
+
+    for (const mp of segmentMidpoints) {
+      const defaultRad = ((mp.angle - 90) * Math.PI) / 180;
+      const testX = mp.x + Math.cos(defaultRad);
+      const testY = mp.y + Math.sin(defaultRad);
+      // If default offset moves closer to centroid, flip to outward
+      const distFromOffset = (testX - cx) ** 2 + (testY - cy) ** 2;
+      const distFromMidpoint = (mp.x - cx) ** 2 + (mp.y - cy) ** 2;
+      if (distFromOffset < distFromMidpoint) {
+        mp.labelOffsetAngle = mp.angle + 90;
+      }
+    }
+  }
 
   // Build SVG path
   let pathD = `M ${points[0].x} ${points[0].y}`;
