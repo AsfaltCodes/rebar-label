@@ -1,4 +1,4 @@
-# RebarLabel Project Memory
+# EisenLabel Project Memory
 
 ## Project Overview
 Desktop app for creating/printing rebar labels. Tauri v2 + SvelteKit + SQLite + jsPDF.
@@ -16,7 +16,7 @@ Desktop app for creating/printing rebar labels. Tauri v2 + SvelteKit + SQLite + 
 - MinGW: WinLibs installed via winget at `C:\Users\Matei\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin`
 - **CRITICAL**: MinGW must be in PATH for cargo build. Use: `export PATH="/c/Users/Matei/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/bin:$PATH"`
 - Cargo.toml crate-type must be `["rlib"]` only (not cdylib/staticlib) to avoid export ordinal overflow on Windows GNU target
-- SQLite DB location: `%APPDATA%/RebarLabel/data.db`
+- SQLite DB location: `%APPDATA%/EisenLabel/data.db`
 
 ## Implementation Status (as of 2026-03-03)
 All 18 tasks COMPLETE. MVP is fully functional.

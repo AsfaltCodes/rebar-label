@@ -1,8 +1,8 @@
 [package]
-name = "rebar-label"
+name = "eisen-label"
 version = "0.1.0"
-description = "Rebar Label Maker"
-authors = ["RebarLabel"]
+description = "Eisen Label Maker"
+authors = ["EisenLabel"]
 license = ""
 repository = ""
 edition = "2021"

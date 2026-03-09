@@ -8,12 +8,12 @@ function isTauri(): boolean {
 // LocalStorage-based fallback for dev mode (no Tauri)
 class LocalDB {
   private getStore<T>(key: string): T[] {
-    const data = localStorage.getItem(`rebarlabel_${key}`);
+    const data = localStorage.getItem(`eisenlabel_${key}`);
     return data ? JSON.parse(data) : [];
   }
 
   private setStore<T>(key: string, data: T[]): void {
-    localStorage.setItem(`rebarlabel_${key}`, JSON.stringify(data));
+    localStorage.setItem(`eisenlabel_${key}`, JSON.stringify(data));
   }
 
   private nextId(key: string): number {
@@ -118,14 +118,14 @@ class LocalDB {
 
   // Settings
   async getSettings(): Promise<AppSettings> {
-    const stored = localStorage.getItem('rebarlabel_settings');
+    const stored = localStorage.getItem('eisenlabel_settings');
     return stored ? { ...DEFAULT_SETTINGS, ...JSON.parse(stored) } : { ...DEFAULT_SETTINGS };
   }
 
   async updateSettings(data: Partial<AppSettings>): Promise<AppSettings> {
     const current = await this.getSettings();
     const updated = { ...current, ...data };
-    localStorage.setItem('rebarlabel_settings', JSON.stringify(updated));
+    localStorage.setItem('eisenlabel_settings', JSON.stringify(updated));
     return updated;
   }
 }

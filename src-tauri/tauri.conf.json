@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "RebarLabel",
+  "productName": "EisenLabel",
   "version": "0.1.0",
-  "identifier": "com.rebarlabel.app",
+  "identifier": "com.eisenlabel.app",
   "build": {
     "frontendDist": "../build",
     "devUrl": "http://localhost:5173",
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "RebarLabel",
+        "title": "EisenLabel",
         "width": 1280,
         "height": 800,
         "resizable": true,

@@ -3,12 +3,12 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-/// Returns the path to the database file: %APPDATA%/RebarLabel/data.db
+/// Returns the path to the database file: %APPDATA%/EisenLabel/data.db
 fn db_path() -> PathBuf {
     let app_dir = dirs::data_dir()
         .expect("Could not find AppData directory")
-        .join("RebarLabel");
-    fs::create_dir_all(&app_dir).expect("Could not create RebarLabel data dir");
+        .join("EisenLabel");
+    fs::create_dir_all(&app_dir).expect("Could not create EisenLabel data dir");
     app_dir.join("data.db")
 }
 

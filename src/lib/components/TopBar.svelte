@@ -4,6 +4,7 @@
   import { theme, cycleTheme, resolvedTheme } from '$lib/stores/themeStore';
   import { _ } from '$lib/stores/i18n';
   import Icon from './ui/Icon.svelte';
+  import logo from '$lib/assets/logo.svg';
 
   export let onPrint: () => void = () => {};
 
@@ -27,9 +28,9 @@
 <header class="topbar">
   <div class="brand" role="button" tabindex="0" on:click={goToEditor} on:keydown={goToEditor}>
     <span class="brand-icon">
-      <Icon name="file-text" size={20} />
+      <img src={logo} alt="EisenLabel Logo" width="24" height="24" />
     </span>
-    <span class="brand-name">RebarLabel</span>
+    <span class="brand-name">EisenLabel</span>
   </div>
 
   <nav class="nav">

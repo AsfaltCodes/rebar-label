@@ -78,7 +78,7 @@
       {
         label: 'Help',
         items: [
-          { label: 'About RebarLabel', action: () => alert('RebarLabel v0.1.0\nDesktop rebar label maker.') },
+          { label: 'About EisenLabel', action: () => alert('EisenLabel v0.1.0\nDesktop rebar label maker.') },
         ] as MenuItem[],
       },
     ];

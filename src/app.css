@@ -64,10 +64,10 @@
   --color-text-inverse: #ffffff;
 
   /* Primary */
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-light: #eff6ff;
-  --color-primary-border: #bfdbfe;
+  --color-primary: #a60216;
+  --color-primary-hover: #8a0112;
+  --color-primary-light: #fdf2f3;
+  --color-primary-border: #f5c6cb;
 
   /* Danger */
   --color-danger: #dc2626;
@@ -84,8 +84,8 @@
 
   /* Inputs */
   --color-input-border: #d0d0d0;
-  --color-input-focus: #4a90d9;
-  --color-input-focus-ring: rgba(74, 144, 217, 0.15);
+  --color-input-focus: #a60216;
+  --color-input-focus-ring: rgba(166, 2, 22, 0.15);
 
   /* Overlay / shadows */
   --color-overlay: rgba(0, 0, 0, 0.4);
@@ -96,7 +96,7 @@
   /* TopBar */
   --color-topbar: #1e293b;
   --color-topbar-text: #cbd5e1;
-  --color-topbar-icon: #60a5fa;
+  --color-topbar-icon: #e04058;
   --color-topbar-hover: rgba(255, 255, 255, 0.08);
   --color-topbar-active: rgba(255, 255, 255, 0.12);
 
@@ -109,76 +109,76 @@
   --color-page-bg: #ffffff;
 
   /* Selection */
-  --color-selected-border: #2563eb;
-  --color-selected-glow: rgba(37, 99, 235, 0.25);
+  --color-selected-border: #a60216;
+  --color-selected-glow: rgba(166, 2, 22, 0.25);
 }
 
 /* ─── Dark mode ────────────────────────────────── */
 [data-theme="dark"] {
-  /* Surfaces — warm chocolate/charcoal */
-  --color-bg: #1a1614;
-  --color-surface: #252019;
-  --color-surface-hover: #352e25;
-  --color-surface-alt: #2a241d;
+  /* Surfaces — warm charcoal */
+  --color-bg: #161413;
+  --color-surface: #201e1c;
+  --color-surface-hover: #302d2a;
+  --color-surface-alt: #272422;
 
-  /* Borders — warm brown */
-  --color-border: #3d3429;
-  --color-border-light: #332c22;
+  /* Borders — warm gray */
+  --color-border: #3e3a37;
+  --color-border-light: #302d2a;
 
   /* Text — warm off-whites */
-  --color-text: #e8e0d4;
-  --color-text-secondary: #a89d8e;
-  --color-text-muted: #7d7166;
-  --color-text-faint: #5c5248;
+  --color-text: #e8e5e2;
+  --color-text-secondary: #a6a29e;
+  --color-text-muted: #807b76;
+  --color-text-faint: #585450;
 
-  /* Primary — warm amber */
-  --color-primary: #e09145;
-  --color-primary-hover: #c67d38;
-  --color-primary-light: #3a2e1e;
-  --color-primary-border: #b06e2d;
+  /* Primary — crimson red */
+  --color-primary: #d4253a;
+  --color-primary-hover: #b91c2e;
+  --color-primary-light: #2a1519;
+  --color-primary-border: #8a0112;
 
   /* Danger */
   --color-danger: #ef4444;
-  --color-danger-bg: #3b1111;
+  --color-danger-bg: #2c1614;
   --color-danger-border: #7f1d1d;
 
   /* Warning */
   --color-warning: #fbbf24;
-  --color-warning-bg: #3b2f05;
+  --color-warning-bg: #2c2208;
 
   /* Success */
   --color-success: #22c55e;
-  --color-success-bg: #0f2e1a;
+  --color-success-bg: #122b1a;
 
   /* Inputs */
-  --color-input-border: #4a4035;
-  --color-input-focus: #e09145;
-  --color-input-focus-ring: rgba(224, 145, 69, 0.2);
+  --color-input-border: #3e3a37;
+  --color-input-focus: #d4253a;
+  --color-input-focus-ring: rgba(212, 37, 58, 0.2);
 
   /* Overlay / shadows */
   --color-overlay: rgba(0, 0, 0, 0.6);
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 4px 24px rgba(0, 0, 0, 0.5);
-  --shadow-card: 0 1px 6px rgba(0, 0, 0, 0.3);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 4px 24px rgba(0, 0, 0, 0.6);
+  --shadow-card: 0 1px 6px rgba(0, 0, 0, 0.4);
 
   /* TopBar */
-  --color-topbar: #1a1614;
-  --color-topbar-text: #a89d8e;
-  --color-topbar-icon: #e09145;
-  --color-topbar-hover: rgba(255, 245, 230, 0.06);
-  --color-topbar-active: rgba(255, 245, 230, 0.1);
+  --color-topbar: #161413;
+  --color-topbar-text: #a6a29e;
+  --color-topbar-icon: #e04058;
+  --color-topbar-hover: rgba(255, 248, 240, 0.06);
+  --color-topbar-active: rgba(255, 248, 240, 0.1);
 
   /* Shapes (SVG) */
-  --color-shape-stroke: #a89d8e;
-  --color-shape-label: #7d7166;
+  --color-shape-stroke: #a6a29e;
+  --color-shape-label: #807b76;
 
   /* Page preview */
-  --color-preview-bg: #151210;
-  --color-page-bg: #252019;
+  --color-preview-bg: #110f0e;
+  --color-page-bg: #201e1c;
 
   /* Selection */
-  --color-selected-border: #e09145;
-  --color-selected-glow: rgba(224, 145, 69, 0.3);
+  --color-selected-border: #d4253a;
+  --color-selected-glow: rgba(212, 37, 58, 0.3);
 }
 
 html, body {
