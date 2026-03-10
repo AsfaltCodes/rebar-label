@@ -18,7 +18,13 @@
 
   // Grid mode: derive label dimensions from columns × rows
   $: gridDims = job?.sizing_mode === 'grid'
-    ? calculateLabelDimensions(pageW, pageH, s.margin_top_mm, s.margin_bottom_mm, s.margin_left_mm, s.margin_right_mm, s.label_gap_mm, job.columns, job.rows)
+    ? calculateLabelDimensions(
+        pageW, pageH, 
+        job.margin_top_mm || 0, job.margin_bottom_mm || 0, 
+        job.margin_left_mm || 0, job.margin_right_mm || 0, 
+        job.label_gap_mm || 0, 
+        job.columns, job.rows
+      )
     : null;
   $: labelW = gridDims ? gridDims.width : (job ? job.label_width_mm : 80);
   $: labelH = gridDims ? gridDims.height : (job ? job.label_height_mm : 50);
@@ -26,10 +32,10 @@
   $: layout = job
     ? calculateLayout(
         pageW, pageH,
-        s.margin_top_mm, s.margin_bottom_mm,
-        s.margin_left_mm, s.margin_right_mm,
+        job.margin_top_mm || 0, job.margin_bottom_mm || 0,
+        job.margin_left_mm || 0, job.margin_right_mm || 0,
         labelW, labelH,
-        s.label_gap_mm,
+        job.label_gap_mm || 0,
         allLabels.map(l => ({ copies: l.copies }))
       )
     : null;

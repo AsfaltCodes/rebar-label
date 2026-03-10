@@ -22,16 +22,14 @@
     />
     {#each renderData.segmentMidpoints as mp}
       {@const boundsSpan = Math.max(renderData.bounds.maxX - renderData.bounds.minX, renderData.bounds.maxY - renderData.bounds.minY)}
-      {@const perpRad = (mp.labelOffsetAngle * Math.PI) / 180}
-      {@const offsetDist = boundsSpan * 0.08}
       <text
-        x={mp.x + Math.cos(perpRad) * offsetDist}
-        y={mp.y + Math.sin(perpRad) * offsetDist}
+        x={mp.labelX}
+        y={mp.labelY}
         text-anchor="middle"
         dominant-baseline="middle"
         font-size={boundsSpan * 0.07}
-        style="fill: var(--color-shape-label)"
-        font-family="Inter, sans-serif"
+        fill="var(--color-text-secondary)"
+        font-weight="500"
       >{mp.length}</text>
     {/each}
   </svg>

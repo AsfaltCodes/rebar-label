@@ -93,6 +93,15 @@ impl AppDb {
         conn.execute("ALTER TABLE jobs ADD COLUMN phone_enabled INTEGER NOT NULL DEFAULT 0", []).ok();
         conn.execute("ALTER TABLE jobs ADD COLUMN job_field_values TEXT NOT NULL DEFAULT '{}'", []).ok();
 
+        // Print layout columns for templates and jobs
+        for table in ["templates", "jobs"] {
+            conn.execute(&format!("ALTER TABLE {} ADD COLUMN margin_top_mm REAL NOT NULL DEFAULT 0", table), []).ok();
+            conn.execute(&format!("ALTER TABLE {} ADD COLUMN margin_bottom_mm REAL NOT NULL DEFAULT 0", table), []).ok();
+            conn.execute(&format!("ALTER TABLE {} ADD COLUMN margin_left_mm REAL NOT NULL DEFAULT 0", table), []).ok();
+            conn.execute(&format!("ALTER TABLE {} ADD COLUMN margin_right_mm REAL NOT NULL DEFAULT 0", table), []).ok();
+            conn.execute(&format!("ALTER TABLE {} ADD COLUMN label_gap_mm REAL NOT NULL DEFAULT 0", table), []).ok();
+        }
+
         // Insert default settings if they don't exist
         let defaults = vec![
             ("logo_image_path", ""),

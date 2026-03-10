@@ -37,6 +37,11 @@
   let pageOrientation = template.page_orientation || 'portrait';
   let pageWidth = template.page_width_mm || 210;
   let pageHeight = template.page_height_mm || 297;
+  let marginTop = template.margin_top_mm || 0;
+  let marginBottom = template.margin_bottom_mm || 0;
+  let marginLeft = template.margin_left_mm || 0;
+  let marginRight = template.margin_right_mm || 0;
+  let labelGap = template.label_gap_mm || 0;
   let fields: FieldDef[] = template.fields ? [...template.fields] : [];
 
   $: logoSrc = $settings.logo_image_path || null;
@@ -61,9 +66,9 @@
     ? calculateLabelDimensions(
         effectivePageW || 210,
         effectivePageH || 297,
-        s.margin_top_mm || 0, s.margin_bottom_mm || 0,
-        s.margin_left_mm || 0, s.margin_right_mm || 0,
-        s.label_gap_mm || 0, columns, rows
+        marginTop, marginBottom,
+        marginLeft, marginRight,
+        labelGap, columns, rows
       )
     : { width: Math.max(width, 1), height: Math.max(height, 1) };
 
@@ -138,6 +143,11 @@
       page_width_mm: effectivePageW,
       page_height_mm: effectivePageH,
       page_orientation: pageOrientation,
+      margin_top_mm: marginTop,
+      margin_bottom_mm: marginBottom,
+      margin_left_mm: marginLeft,
+      margin_right_mm: marginRight,
+      label_gap_mm: labelGap,
       fields,
     });
   }
@@ -185,6 +195,35 @@
           </div>
         </div>
       {/if}
+    </div>
+
+    <!-- Print Layout -->
+    <div class="section">
+      <h4>Print Layout</h4>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Top Margin (mm)</label>
+          <input type="number" bind:value={marginTop} min="0" max="100" step="1" />
+        </div>
+        <div class="form-group">
+          <label>Bottom Margin (mm)</label>
+          <input type="number" bind:value={marginBottom} min="0" max="100" step="1" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Left Margin (mm)</label>
+          <input type="number" bind:value={marginLeft} min="0" max="100" step="1" />
+        </div>
+        <div class="form-group">
+          <label>Right Margin (mm)</label>
+          <input type="number" bind:value={marginRight} min="0" max="100" step="1" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Label Gap (mm)</label>
+        <input type="number" bind:value={labelGap} min="0" max="50" step="0.5" />
+      </div>
     </div>
 
     <!-- Label Sizing -->

@@ -103,33 +103,6 @@
             </select>
           </div>
         </section>
-
-        <!-- Print Layout -->
-        <section class="section">
-          <h3 class="section-title">{$_('settings.print_layout')}</h3>
-          <div class="margin-grid">
-            <div class="form-group">
-              <label>{$_('settings.top')}</label>
-              <input type="number" bind:value={s.margin_top_mm} min="0" max="100" step="1" />
-            </div>
-            <div class="form-group">
-              <label>{$_('settings.bottom')}</label>
-              <input type="number" bind:value={s.margin_bottom_mm} min="0" max="100" step="1" />
-            </div>
-            <div class="form-group">
-              <label>{$_('settings.left')}</label>
-              <input type="number" bind:value={s.margin_left_mm} min="0" max="100" step="1" />
-            </div>
-            <div class="form-group">
-              <label>{$_('settings.right')}</label>
-              <input type="number" bind:value={s.margin_right_mm} min="0" max="100" step="1" />
-            </div>
-          </div>
-          <div class="form-group">
-            <label>{$_('settings.gap')}</label>
-            <input type="number" bind:value={s.label_gap_mm} min="0" max="50" step="0.5" />
-          </div>
-        </section>
       </div>
 
       <div class="modal-footer">

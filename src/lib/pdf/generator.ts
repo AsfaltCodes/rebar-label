@@ -18,9 +18,9 @@ export function generatePdf(
   if (job.sizing_mode === 'grid') {
     const dims = calculateLabelDimensions(
       pageW, pageH,
-      settings.margin_top_mm, settings.margin_bottom_mm,
-      settings.margin_left_mm, settings.margin_right_mm,
-      settings.label_gap_mm, job.columns, job.rows
+      job.margin_top_mm || 0, job.margin_bottom_mm || 0,
+      job.margin_left_mm || 0, job.margin_right_mm || 0,
+      job.label_gap_mm || 0, job.columns, job.rows
     );
     labelW = dims.width;
     labelH = dims.height;
@@ -31,10 +31,10 @@ export function generatePdf(
 
   const layout = calculateLayout(
     pageW, pageH,
-    settings.margin_top_mm, settings.margin_bottom_mm,
-    settings.margin_left_mm, settings.margin_right_mm,
+    job.margin_top_mm || 0, job.margin_bottom_mm || 0,
+    job.margin_left_mm || 0, job.margin_right_mm || 0,
     labelW, labelH,
-    settings.label_gap_mm,
+    job.label_gap_mm || 0,
     labels.map(l => ({ copies: l.copies }))
   );
 
@@ -67,8 +67,8 @@ export function generatePdf(
     for (let slot = filledSlots; slot < layout.labelsPerPage; slot++) {
       const col = slot % layout.columns;
       const row = Math.floor(slot / layout.columns);
-      const blankX = settings.margin_left_mm + col * (labelW + settings.label_gap_mm);
-      const blankY = settings.margin_top_mm + row * (labelH + settings.label_gap_mm);
+      const blankX = (job.margin_left_mm || 0) + col * (labelW + (job.label_gap_mm || 0));
+      const blankY = (job.margin_top_mm || 0) + row * (labelH + (job.label_gap_mm || 0));
       drawBlankLabel(doc, blankX, blankY, labelW, labelH, job.fields, job.logo_enabled, logoDataUrl, job.phone_enabled, settings.company_phone);
     }
   }
@@ -263,16 +263,14 @@ function drawLabel(
           );
         }
 
-        // Dimension labels — perpendicular offset from segment
+        // Dimension labels — use precalculated offset
         doc.setFontSize(5);
         doc.setTextColor(120);
         for (const mp of renderData.segmentMidpoints) {
-          const perpRad = (mp.labelOffsetAngle * Math.PI) / 180;
-          const offsetD = Math.max(boundsW, boundsH) * 0.08;
           doc.text(
             String(mp.length),
-            offsetX + mp.x * shapeSc + Math.cos(perpRad) * offsetD * shapeSc,
-            offsetY + mp.y * shapeSc + Math.sin(perpRad) * offsetD * shapeSc,
+            offsetX + mp.labelX * shapeSc,
+            offsetY + mp.labelY * shapeSc,
             { align: 'center' }
           );
         }

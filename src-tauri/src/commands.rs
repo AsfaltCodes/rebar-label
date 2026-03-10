@@ -23,6 +23,11 @@ fn row_to_template(row: &rusqlite::Row) -> rusqlite::Result<Value> {
         "page_width_mm": row.get::<_, f64>(13).unwrap_or(210.0),
         "page_height_mm": row.get::<_, f64>(14).unwrap_or(297.0),
         "page_orientation": row.get::<_, String>(15).unwrap_or_else(|_| "portrait".to_string()),
+        "margin_top_mm": row.get::<_, f64>(16).unwrap_or(0.0),
+        "margin_bottom_mm": row.get::<_, f64>(17).unwrap_or(0.0),
+        "margin_left_mm": row.get::<_, f64>(18).unwrap_or(0.0),
+        "margin_right_mm": row.get::<_, f64>(19).unwrap_or(0.0),
+        "label_gap_mm": row.get::<_, f64>(20).unwrap_or(0.0),
     }))
 }
 
@@ -48,6 +53,11 @@ fn row_to_job(row: &rusqlite::Row) -> rusqlite::Result<Value> {
         "rows": row.get::<_, i32>(17).unwrap_or(5),
         "phone_enabled": row.get::<_, i32>(18).unwrap_or(0) != 0,
         "job_field_values": row.get::<_, String>(19).unwrap_or_else(|_| "{}".to_string()),
+        "margin_top_mm": row.get::<_, f64>(20).unwrap_or(0.0),
+        "margin_bottom_mm": row.get::<_, f64>(21).unwrap_or(0.0),
+        "margin_left_mm": row.get::<_, f64>(22).unwrap_or(0.0),
+        "margin_right_mm": row.get::<_, f64>(23).unwrap_or(0.0),
+        "label_gap_mm": row.get::<_, f64>(24).unwrap_or(0.0),
     }))
 }
 
@@ -69,7 +79,7 @@ fn row_to_label(row: &rusqlite::Row) -> rusqlite::Result<Value> {
 pub fn list_templates(db: State<AppDb>) -> Result<Vec<Value>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
-        .prepare("SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled, page_size, page_width_mm, page_height_mm, page_orientation FROM templates ORDER BY updated_at DESC")
+        .prepare("SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled, page_size, page_width_mm, page_height_mm, page_orientation, margin_top_mm, margin_bottom_mm, margin_left_mm, margin_right_mm, label_gap_mm FROM templates ORDER BY updated_at DESC")
         .map_err(|e| e.to_string())?;
     let rows = stmt
         .query_map([], |row| row_to_template(row))
@@ -81,7 +91,7 @@ pub fn list_templates(db: State<AppDb>) -> Result<Vec<Value>, String> {
 pub fn get_template(db: State<AppDb>, id: i64) -> Result<Value, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     conn.query_row(
-        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled, page_size, page_width_mm, page_height_mm, page_orientation FROM templates WHERE id = ?1",
+        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled, page_size, page_width_mm, page_height_mm, page_orientation, margin_top_mm, margin_bottom_mm, margin_left_mm, margin_right_mm, label_gap_mm FROM templates WHERE id = ?1",
         params![id],
         |row| row_to_template(row),
     ).map_err(|e| e.to_string())
@@ -103,6 +113,11 @@ pub fn create_template(
     page_width_mm: Option<f64>,
     page_height_mm: Option<f64>,
     page_orientation: Option<String>,
+    margin_top_mm: Option<f64>,
+    margin_bottom_mm: Option<f64>,
+    margin_left_mm: Option<f64>,
+    margin_right_mm: Option<f64>,
+    label_gap_mm: Option<f64>,
 ) -> Result<Value, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let sm = sizing_mode.unwrap_or_else(|| "grid".to_string());
@@ -113,14 +128,19 @@ pub fn create_template(
     let pw = page_width_mm.unwrap_or(210.0);
     let ph = page_height_mm.unwrap_or(297.0);
     let po = page_orientation.unwrap_or_else(|| "portrait".to_string());
+    let mt = margin_top_mm.unwrap_or(0.0);
+    let mb = margin_bottom_mm.unwrap_or(0.0);
+    let ml = margin_left_mm.unwrap_or(0.0);
+    let mr = margin_right_mm.unwrap_or(0.0);
+    let gap = label_gap_mm.unwrap_or(0.0);
 
     conn.execute(
-        "INSERT INTO templates (name, label_width_mm, label_height_mm, logo_enabled, fields, sizing_mode, columns, rows, phone_enabled, page_size, page_width_mm, page_height_mm, page_orientation) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
-        params![name, label_width_mm, label_height_mm, logo_enabled as i32, fields, sm, cols, rws, pe, ps, pw, ph, po],
+        "INSERT INTO templates (name, label_width_mm, label_height_mm, logo_enabled, fields, sizing_mode, columns, rows, phone_enabled, page_size, page_width_mm, page_height_mm, page_orientation, margin_top_mm, margin_bottom_mm, margin_left_mm, margin_right_mm, label_gap_mm) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+        params![name, label_width_mm, label_height_mm, logo_enabled as i32, fields, sm, cols, rws, pe, ps, pw, ph, po, mt, mb, ml, mr, gap],
     ).map_err(|e| e.to_string())?;
     let id = conn.last_insert_rowid();
     conn.query_row(
-        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled, page_size, page_width_mm, page_height_mm, page_orientation FROM templates WHERE id = ?1",
+        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled, page_size, page_width_mm, page_height_mm, page_orientation, margin_top_mm, margin_bottom_mm, margin_left_mm, margin_right_mm, label_gap_mm FROM templates WHERE id = ?1",
         params![id],
         |row| row_to_template(row),
     ).map_err(|e| e.to_string())
@@ -143,6 +163,11 @@ pub fn update_template(
     page_width_mm: Option<f64>,
     page_height_mm: Option<f64>,
     page_orientation: Option<String>,
+    margin_top_mm: Option<f64>,
+    margin_bottom_mm: Option<f64>,
+    margin_left_mm: Option<f64>,
+    margin_right_mm: Option<f64>,
+    label_gap_mm: Option<f64>,
 ) -> Result<Value, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     // Build dynamic SET clause
@@ -162,6 +187,11 @@ pub fn update_template(
     if let Some(v) = page_width_mm { sets.push(format!("page_width_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
     if let Some(v) = page_height_mm { sets.push(format!("page_height_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
     if let Some(v) = page_orientation { sets.push(format!("page_orientation = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = margin_top_mm { sets.push(format!("margin_top_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = margin_bottom_mm { sets.push(format!("margin_bottom_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = margin_left_mm { sets.push(format!("margin_left_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = margin_right_mm { sets.push(format!("margin_right_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = label_gap_mm { sets.push(format!("label_gap_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
 
     let id_param_idx = values.len() + 1;
     values.push(Box::new(id));
@@ -171,7 +201,7 @@ pub fn update_template(
     conn.execute(&sql, param_refs.as_slice()).map_err(|e| e.to_string())?;
 
     conn.query_row(
-        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled, page_size, page_width_mm, page_height_mm, page_orientation FROM templates WHERE id = ?1",
+        "SELECT id, name, label_width_mm, label_height_mm, logo_enabled, fields, created_at, updated_at, sizing_mode, columns, rows, phone_enabled, page_size, page_width_mm, page_height_mm, page_orientation, margin_top_mm, margin_bottom_mm, margin_left_mm, margin_right_mm, label_gap_mm FROM templates WHERE id = ?1",
         params![id],
         |row| row_to_template(row),
     ).map_err(|e| e.to_string())
@@ -191,7 +221,7 @@ pub fn delete_template(db: State<AppDb>, id: i64) -> Result<(), String> {
 pub fn list_jobs(db: State<AppDb>) -> Result<Vec<Value>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
-        .prepare("SELECT id, name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, created_at, updated_at, client_name, notes, sizing_mode, columns, rows, phone_enabled, job_field_values FROM jobs ORDER BY updated_at DESC")
+        .prepare("SELECT id, name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, created_at, updated_at, client_name, notes, sizing_mode, columns, rows, phone_enabled, job_field_values, margin_top_mm, margin_bottom_mm, margin_left_mm, margin_right_mm, label_gap_mm FROM jobs ORDER BY updated_at DESC")
         .map_err(|e| e.to_string())?;
     let rows = stmt
         .query_map([], |row| row_to_job(row))
@@ -203,7 +233,7 @@ pub fn list_jobs(db: State<AppDb>) -> Result<Vec<Value>, String> {
 pub fn get_job(db: State<AppDb>, id: i64) -> Result<Value, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     conn.query_row(
-        "SELECT id, name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, created_at, updated_at, client_name, notes, sizing_mode, columns, rows, phone_enabled, job_field_values FROM jobs WHERE id = ?1",
+        "SELECT id, name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, created_at, updated_at, client_name, notes, sizing_mode, columns, rows, phone_enabled, job_field_values, margin_top_mm, margin_bottom_mm, margin_left_mm, margin_right_mm, label_gap_mm FROM jobs WHERE id = ?1",
         params![id],
         |row| row_to_job(row),
     ).map_err(|e| e.to_string())
@@ -229,6 +259,11 @@ pub fn create_job(
     rows: Option<i32>,
     phone_enabled: Option<bool>,
     job_field_values: Option<String>,
+    margin_top_mm: Option<f64>,
+    margin_bottom_mm: Option<f64>,
+    margin_left_mm: Option<f64>,
+    margin_right_mm: Option<f64>,
+    label_gap_mm: Option<f64>,
 ) -> Result<Value, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let cn = client_name.unwrap_or_default();
@@ -238,14 +273,19 @@ pub fn create_job(
     let rws = rows.unwrap_or(5);
     let pe = phone_enabled.unwrap_or(false) as i32;
     let jfv = job_field_values.unwrap_or_else(|| "{}".to_string());
+    let mt = margin_top_mm.unwrap_or(0.0);
+    let mb = margin_bottom_mm.unwrap_or(0.0);
+    let ml = margin_left_mm.unwrap_or(0.0);
+    let mr = margin_right_mm.unwrap_or(0.0);
+    let gap = label_gap_mm.unwrap_or(0.0);
 
     conn.execute(
-        "INSERT INTO jobs (name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, client_name, notes, sizing_mode, columns, rows, phone_enabled, job_field_values) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
-        params![name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled as i32, page_size, page_width_mm, page_height_mm, page_orientation, cn, nt, sm, cols, rws, pe, jfv],
+        "INSERT INTO jobs (name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, client_name, notes, sizing_mode, columns, rows, phone_enabled, job_field_values, margin_top_mm, margin_bottom_mm, margin_left_mm, margin_right_mm, label_gap_mm) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)",
+        params![name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled as i32, page_size, page_width_mm, page_height_mm, page_orientation, cn, nt, sm, cols, rws, pe, jfv, mt, mb, ml, mr, gap],
     ).map_err(|e| e.to_string())?;
     let id = conn.last_insert_rowid();
     conn.query_row(
-        "SELECT id, name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, created_at, updated_at, client_name, notes, sizing_mode, columns, rows, phone_enabled, job_field_values FROM jobs WHERE id = ?1",
+        "SELECT id, name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, created_at, updated_at, client_name, notes, sizing_mode, columns, rows, phone_enabled, job_field_values, margin_top_mm, margin_bottom_mm, margin_left_mm, margin_right_mm, label_gap_mm FROM jobs WHERE id = ?1",
         params![id],
         |row| row_to_job(row),
     ).map_err(|e| e.to_string())
@@ -268,6 +308,11 @@ pub fn update_job(
     rows: Option<i32>,
     phone_enabled: Option<bool>,
     job_field_values: Option<String>,
+    margin_top_mm: Option<f64>,
+    margin_bottom_mm: Option<f64>,
+    margin_left_mm: Option<f64>,
+    margin_right_mm: Option<f64>,
+    label_gap_mm: Option<f64>,
 ) -> Result<Value, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let mut sets: Vec<String> = vec!["updated_at = datetime('now')".to_string()];
@@ -286,6 +331,11 @@ pub fn update_job(
     if let Some(v) = rows { sets.push(format!("rows = ?{}", values.len() + 1)); values.push(Box::new(v)); }
     if let Some(v) = phone_enabled { sets.push(format!("phone_enabled = ?{}", values.len() + 1)); values.push(Box::new(v as i32)); }
     if let Some(v) = job_field_values { sets.push(format!("job_field_values = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = margin_top_mm { sets.push(format!("margin_top_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = margin_bottom_mm { sets.push(format!("margin_bottom_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = margin_left_mm { sets.push(format!("margin_left_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = margin_right_mm { sets.push(format!("margin_right_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
+    if let Some(v) = label_gap_mm { sets.push(format!("label_gap_mm = ?{}", values.len() + 1)); values.push(Box::new(v)); }
 
     let id_param_idx = values.len() + 1;
     values.push(Box::new(id));
@@ -295,7 +345,7 @@ pub fn update_job(
     conn.execute(&sql, param_refs.as_slice()).map_err(|e| e.to_string())?;
 
     conn.query_row(
-        "SELECT id, name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, created_at, updated_at, client_name, notes, sizing_mode, columns, rows, phone_enabled, job_field_values FROM jobs WHERE id = ?1",
+        "SELECT id, name, source_template_id, fields, label_width_mm, label_height_mm, logo_enabled, page_size, page_width_mm, page_height_mm, page_orientation, created_at, updated_at, client_name, notes, sizing_mode, columns, rows, phone_enabled, job_field_values, margin_top_mm, margin_bottom_mm, margin_left_mm, margin_right_mm, label_gap_mm FROM jobs WHERE id = ?1",
         params![id],
         |row| row_to_job(row),
     ).map_err(|e| e.to_string())

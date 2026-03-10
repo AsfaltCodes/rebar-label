@@ -23,6 +23,11 @@ export interface Template {
   page_width_mm: number;
   page_height_mm: number;
   page_orientation: 'portrait' | 'landscape';
+  margin_top_mm: number;
+  margin_bottom_mm: number;
+  margin_left_mm: number;
+  margin_right_mm: number;
+  label_gap_mm: number;
   fields: FieldDef[];
   created_at: string;
   updated_at: string;
@@ -47,6 +52,11 @@ export interface Job {
   page_width_mm: number;
   page_height_mm: number;
   page_orientation: 'portrait' | 'landscape';
+  margin_top_mm: number;
+  margin_bottom_mm: number;
+  margin_left_mm: number;
+  margin_right_mm: number;
+  label_gap_mm: number;
   created_at: string;
   updated_at: string;
 }
@@ -71,11 +81,6 @@ export interface AppSettings {
   language: 'en' | 'ro';
   company_name: string;
   company_phone: string;
-  margin_top_mm: number;
-  margin_bottom_mm: number;
-  margin_left_mm: number;
-  margin_right_mm: number;
-  label_gap_mm: number;
 }
 
 export const PAGE_SIZES: Record<string, { width: number; height: number }> = {
@@ -90,9 +95,4 @@ export const DEFAULT_SETTINGS: AppSettings = {
   language: 'en',
   company_name: '',
   company_phone: '',
-  margin_top_mm: 0,
-  margin_bottom_mm: 0,
-  margin_left_mm: 0,
-  margin_right_mm: 0,
-  label_gap_mm: 0,
 };

@@ -287,15 +287,9 @@ class TauriDB {
     const raw = await this.invoke<Record<string, string>>('get_all_settings');
     return {
       logo_image_path: raw.logo_image_path || '',
-      default_page_size: raw.default_page_size || 'A4',
-      default_page_orientation: (raw.default_page_orientation as 'portrait' | 'landscape') || 'portrait',
+      language: (raw.language as 'en' | 'ro') || 'en',
       company_name: raw.company_name || '',
       company_phone: raw.company_phone || '',
-      margin_top_mm: raw.margin_top_mm !== undefined ? parseFloat(raw.margin_top_mm) : 0,
-      margin_bottom_mm: raw.margin_bottom_mm !== undefined ? parseFloat(raw.margin_bottom_mm) : 0,
-      margin_left_mm: raw.margin_left_mm !== undefined ? parseFloat(raw.margin_left_mm) : 0,
-      margin_right_mm: raw.margin_right_mm !== undefined ? parseFloat(raw.margin_right_mm) : 0,
-      label_gap_mm: raw.label_gap_mm !== undefined ? parseFloat(raw.label_gap_mm) : 0,
     };
   }
 

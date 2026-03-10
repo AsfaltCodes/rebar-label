@@ -139,11 +139,9 @@
           stroke-linejoin="round"
         />
         {#each shapeData.segmentMidpoints as mp}
-          {@const perpRad = (mp.labelOffsetAngle * Math.PI) / 180}
-          {@const offsetDist = boundsSpan * 0.08}
           <text
-            x={mp.x + Math.cos(perpRad) * offsetDist}
-            y={mp.y + Math.sin(perpRad) * offsetDist}
+            x={mp.labelX}
+            y={mp.labelY}
             text-anchor="middle"
             dominant-baseline="middle"
             font-size={Math.max(8, boundsSpan * 0.08)}

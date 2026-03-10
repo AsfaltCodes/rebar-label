@@ -9,7 +9,7 @@ export interface ShapeRenderData {
   pathD: string;           // SVG path d attribute
   points: Point[];         // All vertices
   bounds: { minX: number; minY: number; maxX: number; maxY: number };
-  segmentMidpoints: { x: number; y: number; length: number; angle: number; labelOffsetAngle: number }[];
+  segmentMidpoints: { x: number; y: number; length: number; angle: number; labelOffsetAngle: number; labelX: number; labelY: number }[];
   isClosed: boolean;
 }
 
@@ -38,7 +38,15 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
 
     const midX = x + dx / 2;
     const midY = y + dy / 2;
-    segmentMidpoints.push({ x: midX, y: midY, length: seg.length, angle: currentAngle, labelOffsetAngle: currentAngle - 90 });
+    segmentMidpoints.push({ 
+      x: midX, 
+      y: midY, 
+      length: seg.length, 
+      angle: currentAngle, 
+      labelOffsetAngle: currentAngle - 90,
+      labelX: 0, 
+      labelY: 0 
+    });
 
     x += dx;
     y += dy;
@@ -93,6 +101,45 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
     maxX: Math.max(...allX) + padding,
     maxY: Math.max(...allY) + padding,
   };
+
+  // Calculate final label positions
+  const maxDim = Math.max(boundsW, boundsH, 1);
+  const baseOffsetD = maxDim * 0.08;
+
+  for (let i = 0; i < segmentMidpoints.length; i++) {
+    const mp = segmentMidpoints[i];
+    const isFirst = i === 0;
+    const isLast = i === segmentMidpoints.length - 1;
+    const isShort = mp.length <= maxDim * 0.3;
+    
+    // Scale offset down for very short segments
+    const offsetD = Math.min(baseOffsetD, mp.length * 0.4);
+    const labelAngleRad = (mp.labelOffsetAngle * Math.PI) / 180;
+    
+    // Default base position is midpoint
+    let anchorX = mp.x;
+    let anchorY = mp.y;
+
+    // Hook heuristic: shift label along segment towards free end
+    if (isShort && segments.length > 1) {
+      if (isFirst) {
+        const nextSeg = segments[1];
+        if (Math.abs(nextSeg.angle) >= 90) {
+           anchorX += Math.cos((mp.angle + 180) * Math.PI / 180) * mp.length * 0.3;
+           anchorY += Math.sin((mp.angle + 180) * Math.PI / 180) * mp.length * 0.3;
+        }
+      } else if (isLast) {
+        const currentSeg = segments[i];
+        if (Math.abs(currentSeg.angle) >= 90) {
+           anchorX += Math.cos(mp.angle * Math.PI / 180) * mp.length * 0.3;
+           anchorY += Math.sin(mp.angle * Math.PI / 180) * mp.length * 0.3;
+        }
+      }
+    }
+
+    mp.labelX = anchorX + Math.cos(labelAngleRad) * offsetD;
+    mp.labelY = anchorY + Math.sin(labelAngleRad) * offsetD;
+  }
 
   return { pathD, points, bounds, segmentMidpoints, isClosed };
 }
