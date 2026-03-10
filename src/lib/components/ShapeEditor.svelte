@@ -2,6 +2,7 @@
   import type { Segment } from '$lib/shapes/presets';
   import { type PresetName, PRESET_LABELS, getPresetSegments } from '$lib/shapes/presets';
   import ShapePreview from './ShapePreview.svelte';
+  import ConfirmDialog from './ui/ConfirmDialog.svelte';
   import { _ } from '$lib/stores/i18n';
   import { settings, updateSettings } from '$lib/stores/settingsStore';
 
@@ -18,6 +19,9 @@
   // Save preset popup state
   let showSavePopup = false;
   let savePresetName = '';
+
+  // Delete confirmation state
+  let deleteConfirm = { open: false, name: '' };
 
   function handlePresetChange(e: Event) {
     const val = (e.target as HTMLSelectElement).value;
@@ -49,8 +53,12 @@
     onChange(shapePreset, segments);
   }
 
+  function handleFocus(e: FocusEvent) {
+    (e.target as HTMLInputElement).select();
+  }
+
   function addSegment() {
-    segments = [...segments, { length: 200, angle: 90 }];
+    segments = [...segments, { length: 200, angle: 0 }];
     if (isCustomPreset) {
       shapePreset = 'custom';
     }
@@ -112,8 +120,11 @@
 
   function deleteCustomPreset() {
     if (!isCustomPreset || !shapePreset) return;
-    const name = shapePreset.slice(7);
-    const updated = customPresets.filter(p => p.name !== name);
+    deleteConfirm = { open: true, name: shapePreset.slice(7) };
+  }
+
+  function confirmDeletePreset() {
+    const updated = customPresets.filter(p => p.name !== deleteConfirm.name);
     updateSettings({ custom_shape_presets: updated });
     shapePreset = 'custom';
     onChange(shapePreset, segments);
@@ -150,6 +161,7 @@
 
     <div class="segments-list">
       <div class="seg-header">{$_('shape.segments')}</div>
+      <button class="add-seg" on:click={addSegment}>{$_('shape.add_segment')}</button>
       {#each segments as seg, i}
         <div class="seg-row">
           <span class="seg-num">{i + 1}:</span>
@@ -159,6 +171,7 @@
             value={seg.length}
             on:input={(e) => handleSegmentChange(i, 'length', parseFloat(e.currentTarget.value) || 0)}
             on:keydown={handleKeydown}
+            on:focus={handleFocus}
             min="0"
             step="10"
           />
@@ -170,6 +183,7 @@
             value={seg.angle}
             on:input={(e) => handleSegmentChange(i, 'angle', parseFloat(e.currentTarget.value) || 0)}
             on:keydown={handleKeydown}
+            on:focus={handleFocus}
             step="5"
           />
           <span class="seg-unit">deg</span>
@@ -178,7 +192,6 @@
           {/if}
         </div>
       {/each}
-      <button class="add-seg" on:click={addSegment}>{$_('shape.add_segment')}</button>
     </div>
 
     <!-- Save as preset (only for custom shapes) -->
@@ -216,6 +229,16 @@
     {/if}
   {/if}
 </div>
+
+<ConfirmDialog
+  bind:open={deleteConfirm.open}
+  title={$_('modal.delete_preset.title')}
+  message={$_('modal.delete_preset.message', { name: deleteConfirm.name })}
+  confirmLabel={$_('modal.delete')}
+  cancelLabel={$_('modal.cancel')}
+  danger={true}
+  onConfirm={confirmDeletePreset}
+/>
 
 <style>
   .shape-editor {
@@ -316,7 +339,7 @@
     border-radius: 3px;
     cursor: pointer;
     font-size: 12px;
-    margin-top: 2px;
+    margin-bottom: 2px;
   }
   .add-seg:hover {
     border-color: var(--color-text-faint);

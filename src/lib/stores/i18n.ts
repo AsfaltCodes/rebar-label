@@ -30,6 +30,8 @@ const translations: Translations = {
     'modal.delete_template.message': 'Delete "{name}"? This cannot be undone.',
     'modal.delete_label.title': 'Delete Label',
     'modal.delete_label.message': 'Delete "{name}"? This cannot be undone.',
+    'modal.delete_preset.title': 'Delete Preset',
+    'modal.delete_preset.message': 'Delete preset "{name}"? This cannot be undone.',
 
     // NewJobModal
     'newjob.title': 'New Job',
@@ -209,6 +211,8 @@ const translations: Translations = {
     'modal.delete_template.message': 'Ștergi șablonul „{name}"? Acțiunea e ireversibilă.',
     'modal.delete_label.title': 'Ștergere etichetă',
     'modal.delete_label.message': 'Ștergi eticheta „{name}"? Acțiunea e ireversibilă.',
+    'modal.delete_preset.title': 'Ștergere preset',
+    'modal.delete_preset.message': 'Ștergi presetul „{name}"? Acțiunea e ireversibilă.',
 
     // NewJobModal
     'newjob.title': 'Sesiune nouă',
