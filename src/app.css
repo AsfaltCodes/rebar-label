@@ -4,8 +4,16 @@
   padding: 0;
 }
 
+/* Hide scrollbars globally — content is still scrollable */
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
   --radius: 6px;
 
@@ -115,6 +123,7 @@
 
 /* ─── Dark mode ────────────────────────────────── */
 [data-theme="dark"] {
+  color-scheme: dark;
   /* Surfaces — warm charcoal */
   --color-bg: #161413;
   --color-surface: #201e1c;
@@ -185,7 +194,7 @@ html, body {
   height: 100%;
   overflow: hidden;
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: clamp(13px, 1.1vw, 15px);
   color: var(--color-text);
   background: var(--color-bg);
   -webkit-font-smoothing: antialiased;

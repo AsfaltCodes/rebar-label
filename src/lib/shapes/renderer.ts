@@ -13,6 +13,11 @@ export interface ShapeRenderData {
   isClosed: boolean;
 }
 
+// Helper: compute Y displacement with engineering convention (positive angle = counterclockwise = UP on screen)
+function sinY(rad: number): number {
+  return -Math.sin(rad);
+}
+
 export function renderSegments(segments: Segment[]): ShapeRenderData {
   if (segments.length === 0) {
     return {
@@ -26,7 +31,7 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
 
   const points: Point[] = [{ x: 0, y: 0 }];
   const segmentMidpoints: ShapeRenderData['segmentMidpoints'] = [];
-  let currentAngle = 0; // degrees, 0 = pointing right
+  let currentAngle = 0; // degrees, 0 = pointing right, positive = counterclockwise (UP)
   let x = 0;
   let y = 0;
 
@@ -34,18 +39,18 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
     currentAngle += seg.angle;
     const rad = (currentAngle * Math.PI) / 180;
     const dx = Math.cos(rad) * seg.length;
-    const dy = Math.sin(rad) * seg.length;
+    const dy = sinY(rad) * seg.length;
 
     const midX = x + dx / 2;
     const midY = y + dy / 2;
-    segmentMidpoints.push({ 
-      x: midX, 
-      y: midY, 
-      length: seg.length, 
-      angle: currentAngle, 
-      labelOffsetAngle: currentAngle - 90,
-      labelX: 0, 
-      labelY: 0 
+    segmentMidpoints.push({
+      x: midX,
+      y: midY,
+      length: seg.length,
+      angle: currentAngle,
+      labelOffsetAngle: currentAngle + 90,
+      labelX: 0,
+      labelY: 0
     });
 
     x += dx;
@@ -68,14 +73,14 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
     const cy = unique.reduce((s, p) => s + p.y, 0) / unique.length;
 
     for (const mp of segmentMidpoints) {
-      const defaultRad = ((mp.angle - 90) * Math.PI) / 180;
+      const defaultRad = ((mp.angle + 90) * Math.PI) / 180;
       const testX = mp.x + Math.cos(defaultRad);
-      const testY = mp.y + Math.sin(defaultRad);
+      const testY = mp.y + sinY(defaultRad);
       // If default offset moves closer to centroid, flip to outward
       const distFromOffset = (testX - cx) ** 2 + (testY - cy) ** 2;
       const distFromMidpoint = (mp.x - cx) ** 2 + (mp.y - cy) ** 2;
       if (distFromOffset < distFromMidpoint) {
-        mp.labelOffsetAngle = mp.angle + 90;
+        mp.labelOffsetAngle = mp.angle - 90;
       }
     }
   }
@@ -111,11 +116,11 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
     const isFirst = i === 0;
     const isLast = i === segmentMidpoints.length - 1;
     const isShort = mp.length <= maxDim * 0.3;
-    
+
     // Scale offset down for very short segments
     const offsetD = Math.min(baseOffsetD, mp.length * 0.4);
     const labelAngleRad = (mp.labelOffsetAngle * Math.PI) / 180;
-    
+
     // Default base position is midpoint
     let anchorX = mp.x;
     let anchorY = mp.y;
@@ -126,19 +131,19 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
         const nextSeg = segments[1];
         if (Math.abs(nextSeg.angle) >= 90) {
            anchorX += Math.cos((mp.angle + 180) * Math.PI / 180) * mp.length * 0.3;
-           anchorY += Math.sin((mp.angle + 180) * Math.PI / 180) * mp.length * 0.3;
+           anchorY += sinY((mp.angle + 180) * Math.PI / 180) * mp.length * 0.3;
         }
       } else if (isLast) {
         const currentSeg = segments[i];
         if (Math.abs(currentSeg.angle) >= 90) {
            anchorX += Math.cos(mp.angle * Math.PI / 180) * mp.length * 0.3;
-           anchorY += Math.sin(mp.angle * Math.PI / 180) * mp.length * 0.3;
+           anchorY += sinY(mp.angle * Math.PI / 180) * mp.length * 0.3;
         }
       }
     }
 
     mp.labelX = anchorX + Math.cos(labelAngleRad) * offsetD;
-    mp.labelY = anchorY + Math.sin(labelAngleRad) * offsetD;
+    mp.labelY = anchorY + sinY(labelAngleRad) * offsetD;
   }
 
   return { pathD, points, bounds, segmentMidpoints, isClosed };

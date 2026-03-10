@@ -76,11 +76,17 @@ export interface Label {
   sort_order: number;
 }
 
+export interface CustomShapePreset {
+  name: string;
+  segments: Segment[];
+}
+
 export interface AppSettings {
   logo_image_path: string;
   language: 'en' | 'ro';
   company_name: string;
   company_phone: string;
+  custom_shape_presets: CustomShapePreset[];
 }
 
 export const PAGE_SIZES: Record<string, { width: number; height: number }> = {
@@ -95,4 +101,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   language: 'en',
   company_name: '',
   company_phone: '',
+  custom_shape_presets: [],
 };

@@ -69,6 +69,10 @@
   $: computedValues = buildComputedValues(fields, totalLength, clientName);
   $: values = { ...(jobFieldValues || {}), ...(label.field_values || {}), ...computedValues };
 
+  function fontScale(size: number): number {
+    return size === 1 ? 0.8 : size === 3 ? 1.3 : 1.0;
+  }
+
   function buildComputedValues(fields: FieldDef[], totalLen: number, client: string): Record<string, string> {
     const computed: Record<string, string> = {};
     for (const f of fields) {
@@ -107,17 +111,18 @@
     {#each fieldRows as row}
       {#if row.type === 'full' || row.type === 'half-single'}
         {@const field = row.field}
-        <div class="field-row">
+        {@const fScale = fontScale(field.font_size)}
+        <div class="field-row" style="font-size:{baseFontPx * fScale}px">
           <span class="field-name">{field.label}</span>
           <span class="field-fill" class:bold={field.bold}>{values[field.label] || ''}<span class="field-line"></span></span>
         </div>
       {:else}
         <div class="field-row pair">
-          <span class="field-half">
+          <span class="field-half" style="font-size:{baseFontPx * fontScale(row.left.font_size)}px">
             <span class="field-name">{row.left.label}</span>
             <span class="field-fill" class:bold={row.left.bold}>{values[row.left.label] || ''}<span class="field-line"></span></span>
           </span>
-          <span class="field-half">
+          <span class="field-half" style="font-size:{baseFontPx * fontScale(row.right.font_size)}px">
             <span class="field-name">{row.right.label}</span>
             <span class="field-fill" class:bold={row.right.bold}>{values[row.right.label] || ''}<span class="field-line"></span></span>
           </span>
@@ -240,7 +245,7 @@
     text-overflow: ellipsis;
   }
   .field-fill.bold {
-    font-weight: 600;
+    font-weight: 700;
   }
   .field-line {
     position: absolute;

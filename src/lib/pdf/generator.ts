@@ -203,15 +203,16 @@ function drawLabel(
     } else {
       const leftField = row.left;
       const rightField = row.right;
-      const fontSize = fieldFontSizeMap[leftField.font_size] || 7;
-      const lineH = fontSize * 0.45;
+      const leftFontSize = fieldFontSizeMap[leftField.font_size] || 7;
+      const rightFontSize = fieldFontSizeMap[rightField.font_size] || 7;
+      const lineH = Math.max(leftFontSize, rightFontSize) * 0.45;
       if (currentY + lineH > y + h * 0.6) break;
 
       const halfEnd = leftPad + innerW / 2 - 1;
       const rightStart = leftPad + innerW / 2 + 1;
 
-      drawInlineField(leftField, mergedValues[leftField.label] || '', leftPad, halfEnd, currentY + lineH, fontSize);
-      drawInlineField(rightField, mergedValues[rightField.label] || '', rightStart, rightPad, currentY + lineH, fontSize);
+      drawInlineField(leftField, mergedValues[leftField.label] || '', leftPad, halfEnd, currentY + lineH, leftFontSize);
+      drawInlineField(rightField, mergedValues[rightField.label] || '', rightStart, rightPad, currentY + lineH, rightFontSize);
       currentY += lineH + 0.8;
     }
   }
@@ -376,15 +377,16 @@ function drawBlankLabel(
       drawBlankInlineField(field, leftPad, rightPad, currentY + lineH, fontSize);
       currentY += lineH + 0.8;
     } else {
-      const fontSize = fieldFontSizeMap[row.left.font_size] || 7;
-      const lineH = fontSize * 0.45;
+      const leftFontSize = fieldFontSizeMap[row.left.font_size] || 7;
+      const rightFontSize = fieldFontSizeMap[row.right.font_size] || 7;
+      const lineH = Math.max(leftFontSize, rightFontSize) * 0.45;
       if (currentY + lineH > y + h * 0.6) break;
 
       const halfEnd = leftPad + innerW / 2 - 1;
       const rightStart = leftPad + innerW / 2 + 1;
 
-      drawBlankInlineField(row.left, leftPad, halfEnd, currentY + lineH, fontSize);
-      drawBlankInlineField(row.right, rightStart, rightPad, currentY + lineH, fontSize);
+      drawBlankInlineField(row.left, leftPad, halfEnd, currentY + lineH, leftFontSize);
+      drawBlankInlineField(row.right, rightStart, rightPad, currentY + lineH, rightFontSize);
       currentY += lineH + 0.8;
     }
   }
