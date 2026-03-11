@@ -121,6 +121,40 @@ impl AppDb {
             ).expect("Failed to insert default setting");
         }
 
+        // Migrate label shape_segments from absolute angles to CNC bend angles
+        let migrated: String = conn.query_row(
+            "SELECT value FROM settings WHERE key = 'angles_convention'", [],
+            |r| r.get(0)
+        ).unwrap_or_default();
+        if migrated != "relative" {
+            let mut stmt = conn.prepare("SELECT id, shape_segments FROM labels").unwrap();
+            let rows: Vec<(i64, String)> = stmt.query_map([], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            }).unwrap().filter_map(|r| r.ok()).collect();
+
+            for (id, json) in rows {
+                if let Ok(segs) = serde_json::from_str::<Vec<serde_json::Value>>(&json) {
+                    let mut prev_angle = 0.0f64;
+                    let converted: Vec<serde_json::Value> = segs.iter().map(|s| {
+                        let abs = s["angle"].as_f64().unwrap_or(0.0);
+                        let rel = abs - prev_angle;
+                        prev_angle = abs;
+                        serde_json::json!({"length": s["length"], "angle": rel})
+                    }).collect();
+                    if let Ok(new_json) = serde_json::to_string(&converted) {
+                        conn.execute(
+                            "UPDATE labels SET shape_segments = ?1 WHERE id = ?2",
+                            params![new_json, id]
+                        ).ok();
+                    }
+                }
+            }
+            conn.execute(
+                "INSERT OR REPLACE INTO settings (key, value) VALUES ('angles_convention', 'relative')",
+                []
+            ).ok();
+        }
+
         AppDb { conn: Mutex::new(conn) }
     }
 }

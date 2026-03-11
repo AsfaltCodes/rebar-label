@@ -36,7 +36,7 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
   let y = 0;
 
   for (const seg of segments) {
-    currentAngle = seg.angle;
+    currentAngle += seg.angle;
     const rad = (currentAngle * Math.PI) / 180;
     const dx = Math.cos(rad) * seg.length;
     const dy = sinY(rad) * seg.length;
@@ -128,12 +128,12 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
     // Hook heuristic: shift label along segment towards free end
     if (isShort && segments.length > 1) {
       if (isFirst) {
-        if (Math.abs(segments[1].angle - segments[0].angle) >= 90) {
+        if (Math.abs(segments[1].angle) >= 90) {
            anchorX += Math.cos((mp.angle + 180) * Math.PI / 180) * mp.length * 0.3;
            anchorY += sinY((mp.angle + 180) * Math.PI / 180) * mp.length * 0.3;
         }
       } else if (isLast) {
-        if (Math.abs(segments[i].angle - segments[i - 1].angle) >= 90) {
+        if (Math.abs(segments[i].angle) >= 90) {
            anchorX += Math.cos(mp.angle * Math.PI / 180) * mp.length * 0.3;
            anchorY += sinY(mp.angle * Math.PI / 180) * mp.length * 0.3;
         }

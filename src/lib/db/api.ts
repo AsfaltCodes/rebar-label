@@ -163,6 +163,11 @@ class TauriDB {
       pageHeightMm: data.page_height_mm || 297,
       pageOrientation: data.page_orientation || 'portrait',
       fields: JSON.stringify(data.fields),
+      marginTopMm: data.margin_top_mm || 0,
+      marginBottomMm: data.margin_bottom_mm || 0,
+      marginLeftMm: data.margin_left_mm || 0,
+      marginRightMm: data.margin_right_mm || 0,
+      labelGapMm: data.label_gap_mm || 0,
     });
     return { ...raw, fields: JSON.parse(raw.fields || '[]') };
   }
@@ -178,6 +183,15 @@ class TauriDB {
     if (data.logo_enabled !== undefined) payload.logoEnabled = data.logo_enabled;
     if (data.phone_enabled !== undefined) payload.phoneEnabled = data.phone_enabled;
     if (data.fields !== undefined) payload.fields = JSON.stringify(data.fields);
+    if (data.page_size !== undefined) payload.pageSize = data.page_size;
+    if (data.page_width_mm !== undefined) payload.pageWidthMm = data.page_width_mm;
+    if (data.page_height_mm !== undefined) payload.pageHeightMm = data.page_height_mm;
+    if (data.page_orientation !== undefined) payload.pageOrientation = data.page_orientation;
+    if (data.margin_top_mm !== undefined) payload.marginTopMm = data.margin_top_mm;
+    if (data.margin_bottom_mm !== undefined) payload.marginBottomMm = data.margin_bottom_mm;
+    if (data.margin_left_mm !== undefined) payload.marginLeftMm = data.margin_left_mm;
+    if (data.margin_right_mm !== undefined) payload.marginRightMm = data.margin_right_mm;
+    if (data.label_gap_mm !== undefined) payload.labelGapMm = data.label_gap_mm;
     const raw = await this.invoke<any>('update_template', payload);
     return { ...raw, fields: JSON.parse(raw.fields || '[]') };
   }
@@ -216,6 +230,11 @@ class TauriDB {
       clientName: data.client_name || '',
       notes: data.notes || '',
       jobFieldValues: JSON.stringify(data.job_field_values || {}),
+      marginTopMm: data.margin_top_mm || 0,
+      marginBottomMm: data.margin_bottom_mm || 0,
+      marginLeftMm: data.margin_left_mm || 0,
+      marginRightMm: data.margin_right_mm || 0,
+      labelGapMm: data.label_gap_mm || 0,
     });
     return { ...raw, fields: JSON.parse(raw.fields || '[]'), job_field_values: JSON.parse(raw.job_field_values || '{}') };
   }
@@ -224,6 +243,13 @@ class TauriDB {
     const payload: Record<string, unknown> = { id };
     if (data.name !== undefined) payload.name = data.name;
     if (data.fields !== undefined) payload.fields = JSON.stringify(data.fields);
+    if (data.sizing_mode !== undefined) payload.sizingMode = data.sizing_mode;
+    if (data.columns !== undefined) payload.columns = data.columns;
+    if (data.rows !== undefined) payload.rows = data.rows;
+    if (data.label_width_mm !== undefined) payload.labelWidthMm = data.label_width_mm;
+    if (data.label_height_mm !== undefined) payload.labelHeightMm = data.label_height_mm;
+    if (data.logo_enabled !== undefined) payload.logoEnabled = data.logo_enabled;
+    if (data.phone_enabled !== undefined) payload.phoneEnabled = data.phone_enabled;
     if (data.page_size !== undefined) payload.pageSize = data.page_size;
     if (data.page_width_mm !== undefined) payload.pageWidthMm = data.page_width_mm;
     if (data.page_height_mm !== undefined) payload.pageHeightMm = data.page_height_mm;
@@ -231,6 +257,11 @@ class TauriDB {
     if (data.client_name !== undefined) payload.clientName = data.client_name;
     if (data.notes !== undefined) payload.notes = data.notes;
     if (data.job_field_values !== undefined) payload.jobFieldValues = JSON.stringify(data.job_field_values);
+    if (data.margin_top_mm !== undefined) payload.marginTopMm = data.margin_top_mm;
+    if (data.margin_bottom_mm !== undefined) payload.marginBottomMm = data.margin_bottom_mm;
+    if (data.margin_left_mm !== undefined) payload.marginLeftMm = data.margin_left_mm;
+    if (data.margin_right_mm !== undefined) payload.marginRightMm = data.margin_right_mm;
+    if (data.label_gap_mm !== undefined) payload.labelGapMm = data.label_gap_mm;
     const raw = await this.invoke<any>('update_job', payload);
     return { ...raw, fields: JSON.parse(raw.fields || '[]'), job_field_values: JSON.parse(raw.job_field_values || '{}') };
   }
@@ -285,17 +316,21 @@ class TauriDB {
 
   async getSettings(): Promise<AppSettings> {
     const raw = await this.invoke<Record<string, string>>('get_all_settings');
+    let customPresets: AppSettings['custom_shape_presets'] = [];
+    try { customPresets = JSON.parse(raw.custom_shape_presets || '[]'); } catch {}
     return {
       logo_image_path: raw.logo_image_path || '',
       language: (raw.language as 'en' | 'ro') || 'en',
       company_name: raw.company_name || '',
       company_phone: raw.company_phone || '',
+      custom_shape_presets: customPresets,
     };
   }
 
   async updateSettings(data: Partial<AppSettings>): Promise<AppSettings> {
     for (const [key, value] of Object.entries(data)) {
-      await this.invoke('set_setting', { key, value: String(value) });
+      const serialized = typeof value === 'object' ? JSON.stringify(value) : String(value);
+      await this.invoke('set_setting', { key, value: serialized });
     }
     return this.getSettings();
   }

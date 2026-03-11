@@ -73,6 +73,11 @@
         page_width_mm,
         page_height_mm,
         page_orientation,
+        margin_top_mm: selectedTemplate?.margin_top_mm || 0,
+        margin_bottom_mm: selectedTemplate?.margin_bottom_mm || 0,
+        margin_left_mm: selectedTemplate?.margin_left_mm || 0,
+        margin_right_mm: selectedTemplate?.margin_right_mm || 0,
+        label_gap_mm: selectedTemplate?.label_gap_mm || 0,
       });
 
       // Create first blank label
