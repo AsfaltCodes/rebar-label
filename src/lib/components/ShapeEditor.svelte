@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte';
   import type { Segment } from '$lib/shapes/presets';
   import { type PresetName, PRESET_LABELS, getPresetSegments } from '$lib/shapes/presets';
   import ShapePreview from './ShapePreview.svelte';
@@ -73,13 +74,22 @@
     onChange(shapePreset, segments);
   }
 
-  function handleKeydown(e: KeyboardEvent) {
+  async function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Enter') {
       e.preventDefault();
       const inputs = Array.from(document.querySelectorAll('.seg-input')) as HTMLElement[];
       const currentIndex = inputs.indexOf(e.target as HTMLElement);
-      if (currentIndex !== -1 && currentIndex < inputs.length - 1) {
-        inputs[currentIndex + 1].focus();
+      if (currentIndex !== -1) {
+        if (currentIndex < inputs.length - 1) {
+          inputs[currentIndex + 1].focus();
+        } else {
+          addSegment();
+          await tick();
+          const newInputs = Array.from(document.querySelectorAll('.seg-input')) as HTMLElement[];
+          if (newInputs.length > inputs.length) {
+            newInputs[currentIndex + 1].focus();
+          }
+        }
       }
     }
   }

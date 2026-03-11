@@ -149,7 +149,7 @@ function drawLabel(
 
   // Zone 2: Fields — inline layout (bold label + underline + value on line)
   doc.setTextColor(0);
-  const fieldFontSizeMap: Record<number, number> = { 1: 6, 2: 7, 3: 9 };
+  const fieldFontSizeMap: Record<number, number> = { 1: 6, 2: 7, 3: 14 };
   const labelGap = 0.5; // gap between label text and underline
 
   type FieldRow = { type: 'full'; field: FieldDef } | { type: 'pair'; left: FieldDef; right: FieldDef };
@@ -233,16 +233,16 @@ function drawLabel(
       const boundsH = renderData.bounds.maxY - renderData.bounds.minY;
 
       if (boundsW > 0 && boundsH > 0) {
-        const scaleX = (shapeZoneW * 0.8) / boundsW;
-        const scaleY = (shapeZoneH * 0.7) / boundsH;
+        const scaleX = (shapeZoneW * 1.0) / boundsW;
+        const scaleY = (shapeZoneH * 1.0) / boundsH;
         const shapeSc = Math.min(scaleX, scaleY);
 
         const offsetX = leftPad + (shapeZoneW - boundsW * shapeSc) / 2 - renderData.bounds.minX * shapeSc;
-        const offsetY = shapeZoneY + 1.5 + (shapeZoneH * 0.7 - boundsH * shapeSc) / 2 - renderData.bounds.minY * shapeSc;
+        const offsetY = shapeZoneY + 1.5 + (shapeZoneH * 1.0 - boundsH * shapeSc) / 2 - renderData.bounds.minY * shapeSc;
 
         // Draw shape lines
         doc.setDrawColor(50);
-        doc.setLineWidth(0.3);
+        doc.setLineWidth(0.5);
         for (let i = 0; i < renderData.points.length - 1; i++) {
           const p1 = renderData.points[i];
           const p2 = renderData.points[i + 1];
@@ -265,16 +265,29 @@ function drawLabel(
         }
 
         // Dimension labels — use precalculated offset
-        doc.setFontSize(5);
-        doc.setTextColor(120);
+        doc.setFontSize(10);
+        doc.setFont('Helvetica', 'bold');
+        doc.setTextColor(0);
+        const dist_mm = 2.4; // Consistent close distance from the line
         for (const mp of renderData.segmentMidpoints) {
+          // Calculate normalized outward vector based on the labelOffsetAngle
+          const rad = (mp.labelOffsetAngle * Math.PI) / 180;
+          
+          // Re-calculate the anchor point (midpoint/tip-shifted) by removing the renderer's offset
+          // Wait, I updated the renderer to include the offset in labelX/Y.
+          // Let's just calculate the anchor directly to be 100% sure.
+          
+          const finalX = (offsetX + mp.labelX * shapeSc);
+          const finalY = (offsetY + mp.labelY * shapeSc);
+          
           doc.text(
             String(mp.length),
-            offsetX + mp.labelX * shapeSc,
-            offsetY + mp.labelY * shapeSc,
-            { align: 'center' }
+            finalX,
+            finalY,
+            { align: 'center', baseline: 'middle', angle: 0 }
           );
         }
+        doc.setFont('Helvetica', 'normal');
       }
     }
   }
@@ -337,7 +350,7 @@ function drawBlankLabel(
 
   // Zone 2: Field titles + underlines only (no values)
   doc.setTextColor(0);
-  const fieldFontSizeMap: Record<number, number> = { 1: 6, 2: 7, 3: 9 };
+  const fieldFontSizeMap: Record<number, number> = { 1: 6, 2: 7, 3: 14 };
   const labelGap = 0.5;
 
   type FieldRow = { type: 'full'; field: FieldDef } | { type: 'pair'; left: FieldDef; right: FieldDef };
