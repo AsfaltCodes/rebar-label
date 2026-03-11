@@ -15,44 +15,45 @@ export const PRESET_LABELS: Record<PresetName, string> = {
   'custom': 'Custom',
 };
 
-// All angles are CNC-style bend angles: deflection from current direction.
-// Positive = counterclockwise (left turn), negative = clockwise (right turn).
-// First segment angle sets initial direction (0 = rightward).
+/** CNC bend-before convention: each segment = (length, bend_angle_before_drawing).
+ *  The angle on each segment is applied BEFORE drawing that segment (relative to previous segment).
+ *  Positive angle = clockwise on screen. */
 export function getPresetSegments(preset: PresetName): Segment[] {
   switch (preset) {
     case 'straight':
       return [{ length: 1000, angle: 0 }];
     case 'stirrup':
       return [
-        { length: 70, angle: 135 },    // seismic hook (135° bend)
-        { length: 200, angle: 90 },     // 90° bend
-        { length: 200, angle: 90 },     // 90° bend
-        { length: 200, angle: 90 },     // 90° bend
-        { length: 70, angle: 135 },     // seismic hook (135° bend)
+        { length: 75, angle: 0 },       // opening hook
+        { length: 200, angle: 135 },    // side 1
+        { length: 200, angle: 90 },     // side 2
+        { length: 200, angle: 90 },     // side 3
+        { length: 200, angle: 90 },     // side 4
+        { length: 75, angle: 135 },     // closing hook
       ];
     case 'agrafa':
       return [
-        { length: 150, angle: -90 },    // start downward (bend -90° from right)
-        { length: 400, angle: 90 },     // bend 90° left → go right
-        { length: 50, angle: 135 },     // hook (135° bend)
+        { length: 150, angle: 0 },
+        { length: 400, angle: 90 },
+        { length: 50, angle: 135 },
       ];
     case 'bar_1':
       return [
-        { length: 150, angle: -90 },    // start downward
-        { length: 400, angle: 90 },     // bend 90° → go right
+        { length: 150, angle: 0 },
+        { length: 400, angle: 90 },
       ];
     case 'bar_2':
       return [
-        { length: 150, angle: -90 },    // start downward
-        { length: 400, angle: 90 },     // bend 90° → go right
-        { length: 150, angle: 90 },     // bend 90° → go up
+        { length: 150, angle: 0 },
+        { length: 400, angle: 90 },
+        { length: 150, angle: 90 },
       ];
     case 'bar_3':
       return [
-        { length: 150, angle: -90 },    // start downward
-        { length: 400, angle: 90 },     // bend 90° → go right
-        { length: 150, angle: 90 },     // bend 90° → go up
-        { length: 50, angle: 90 },      // bend 90° → go left (hook)
+        { length: 150, angle: 0 },
+        { length: 400, angle: 90 },
+        { length: 150, angle: 90 },
+        { length: 50, angle: 90 },
       ];
     case 'custom':
       return [];

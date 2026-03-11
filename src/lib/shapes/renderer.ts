@@ -31,12 +31,14 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
 
   const points: Point[] = [{ x: 0, y: 0 }];
   const segmentMidpoints: ShapeRenderData['segmentMidpoints'] = [];
-  let currentAngle = 0; // degrees, 0 = pointing right, positive = counterclockwise (UP)
+  let currentAngle = 0; // degrees, 0 = pointing right. CNC bend-before convention.
   let x = 0;
   let y = 0;
 
   for (const seg of segments) {
-    currentAngle += seg.angle;
+    // CNC convention: bend BEFORE drawing the segment
+    currentAngle -= seg.angle;
+
     const rad = (currentAngle * Math.PI) / 180;
     const dx = Math.cos(rad) * seg.length;
     const dy = sinY(rad) * seg.length;
@@ -58,12 +60,22 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
     points.push({ x, y });
   }
 
-  // Check if closed
+  // Check if closed (before adding tail stub so last point is the real endpoint)
   const first = points[0];
   const last = points[points.length - 1];
   const dist = Math.sqrt((last.x - first.x) ** 2 + (last.y - first.y) ** 2);
   const maxLen = Math.max(...segments.map(s => s.length), 1);
   const isClosed = dist < maxLen * 0.05; // Within 5% of max segment length
+
+  // Draw a short tail stub to visualize the last segment's bend direction
+  const lastSeg = segments[segments.length - 1];
+  if (!isClosed && lastSeg && lastSeg.angle !== 0) {
+    const stubLength = maxLen * 0.08;
+    const rad = (currentAngle * Math.PI) / 180;
+    const stubX = x + Math.cos(rad) * stubLength;
+    const stubY = y + sinY(rad) * stubLength;
+    points.push({ x: stubX, y: stubY });
+  }
 
   // For closed shapes, flip label offsets that point toward the interior
   if (isClosed && points.length > 2) {
@@ -82,6 +94,33 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
       if (distFromOffset < distFromMidpoint) {
         mp.labelOffsetAngle = mp.angle - 90;
       }
+    }
+  }
+
+  // Auto-rotate so the longest segment is horizontal
+  let longestIdx = 0;
+  for (let i = 1; i < segments.length; i++) {
+    if (segments[i].length > segments[longestIdx].length) longestIdx = i;
+  }
+  const rotateAngle = -segmentMidpoints[longestIdx].angle;
+
+  if (rotateAngle !== 0) {
+    const rotRad = (rotateAngle * Math.PI) / 180;
+    const cosR = Math.cos(rotRad);
+    const sinR = Math.sin(rotRad);
+    for (const p of points) {
+      const rx = p.x * cosR - p.y * sinR;
+      const ry = p.x * sinR + p.y * cosR;
+      p.x = rx;
+      p.y = ry;
+    }
+    for (const mp of segmentMidpoints) {
+      const rx = mp.x * cosR - mp.y * sinR;
+      const ry = mp.x * sinR + mp.y * cosR;
+      mp.x = rx;
+      mp.y = ry;
+      mp.angle += rotateAngle;
+      mp.labelOffsetAngle += rotateAngle;
     }
   }
 
@@ -126,13 +165,14 @@ export function renderSegments(segments: Segment[]): ShapeRenderData {
     let anchorY = mp.y;
 
     // Hook heuristic: shift label along segment towards free end
+    // With bend-before, first hook has big bend on segment[1], last hook has big bend on segment[i]
     if (isShort && segments.length > 1) {
       if (isFirst) {
         if (Math.abs(segments[1].angle) >= 90) {
            anchorX += Math.cos((mp.angle + 180) * Math.PI / 180) * mp.length * 0.3;
            anchorY += sinY((mp.angle + 180) * Math.PI / 180) * mp.length * 0.3;
         }
-      } else if (isLast) {
+      } else if (isLast && i > 0) {
         if (Math.abs(segments[i].angle) >= 90) {
            anchorX += Math.cos(mp.angle * Math.PI / 180) * mp.length * 0.3;
            anchorY += sinY(mp.angle * Math.PI / 180) * mp.length * 0.3;
