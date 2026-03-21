@@ -13,8 +13,10 @@
   import { get } from 'svelte/store';
   import { loadSettings, settings } from '$lib/stores/settingsStore';
   import { currentJob, labels, loadJob } from '$lib/stores/jobStore';
-  import { currentScreen, showNewJobModal } from '$lib/stores/uiStore';
+  import { currentScreen, currentPage, showNewJobModal } from '$lib/stores/uiStore';
   import { exportPdf } from '$lib/pdf/generator';
+  import { exportOffer } from '$lib/xlsx/generator';
+  import { exportOfferPdf } from '$lib/pdf/offerGenerator';
   import { initTheme } from '$lib/stores/themeStore';
   import { db } from '$lib/db/api';
   import type { Job } from '$lib/db/types';
@@ -81,10 +83,23 @@
     await exportPdf(job, allLabels, s, s.logo_image_path || null);
   }
 
+  async function handleExportOffer() {
+    const job = get(currentJob);
+    if (!job) return;
+    const allLabels = get(labels);
+    const s = get(settings);
+    if (s.offer_format === 'xlsx') {
+      await exportOffer(job, allLabels, s, s.logo_image_path || null);
+    } else {
+      await exportOfferPdf(job, allLabels, s, s.logo_image_path || null);
+    }
+  }
+
   /** Called by NewJobModal after a job is successfully created */
   async function handleJobCreated(job: Job) {
     await loadJob(job.id);
     await refreshJobs();
+    currentPage.set(0);
     currentScreen.set('editor');
   }
 
@@ -107,8 +122,8 @@
 </svelte:head>
 
 <div class="app-shell">
-  <MenuBar {jobs} onSelectJob={handleSelectJob} onPrint={handlePrint} onDeleteJob={handleDeleteJob} />
-  <TopBar onPrint={handlePrint} />
+  <MenuBar {jobs} onSelectJob={handleSelectJob} onPrint={handlePrint} onExportOffer={handleExportOffer} onDeleteJob={handleDeleteJob} />
+  <TopBar onPrint={handlePrint} onExportOffer={handleExportOffer} />
   <main class="app-main">
     {@render children()}
   </main>
@@ -118,14 +133,6 @@
 <!-- Modal overlays — render above everything -->
 <NewJobModal onCreated={handleJobCreated} />
 <SettingsModal />
-<ConfirmDialog
-  bind:open={deleteJobConfirm.open}
-  title="Delete Job"
-  message={`Delete "${deleteJobConfirm.name}" and all its labels? This cannot be undone.`}
-  confirmLabel="Delete"
-  danger={true}
-  onConfirm={confirmDeleteJob}
-/>
 <ConfirmDialog
   bind:open={deleteJobConfirm.open}
   title="Delete Job"

@@ -17,7 +17,7 @@ export const PRESET_LABELS: Record<PresetName, string> = {
 
 // CNC "bend after draw" convention:
 // Each row = (feed length, then bend this angle). Bar starts at 0° (horizontal/rightward).
-// Positive angle = counterclockwise (left turn), negative = clockwise (right turn).
+// Positive angle = counterclockwise (left turn).
 // The angle on the last segment is the final physical bend (no visual effect on shape).
 export function getPresetSegments(preset: PresetName): Segment[] {
   switch (preset) {
@@ -25,36 +25,36 @@ export function getPresetSegments(preset: PresetName): Segment[] {
       return [{ length: 1000, angle: 0 }];
     case 'stirrup':
       return [
-        { length: 70, angle: 135 },    // feed 70mm right, bend 135° (seismic hook)
-        { length: 200, angle: 90 },     // feed 200mm at 135°, bend 90°
-        { length: 200, angle: 90 },     // feed 200mm at 225°, bend 90°
-        { length: 200, angle: 90 },     // feed 200mm at 315°, bend 90°
-        { length: 200, angle: 135 },    // feed 200mm at 45°, bend 135° (closing hook)
-        { length: 70, angle: 0 },       // feed 70mm at 180°, final bend 0°
+        { length: 70, angle: 135 },
+        { length: 200, angle: 90 },
+        { length: 200, angle: 90 },
+        { length: 200, angle: 90 },
+        { length: 200, angle: 135 },
+        { length: 70, angle: 0 },
       ];
     case 'agrafa':
       return [
-        { length: 150, angle: 90 },    // feed 150mm right, bend 90°
-        { length: 400, angle: 135 },    // feed 400mm down, bend 135° (hook transition)
-        { length: 50, angle: 0 },       // feed 50mm at 45° (visible hook)
+        { length: 150, angle: 90 },
+        { length: 400, angle: 135 },
+        { length: 50, angle: 0 },
       ];
     case 'bar_1':
       return [
-        { length: 150, angle: 90 },    // feed 150mm right, bend 90°
-        { length: 400, angle: 0 },      // feed 400mm down
+        { length: 150, angle: 90 },
+        { length: 400, angle: 0 },
       ];
     case 'bar_2':
       return [
-        { length: 150, angle: 90 },    // feed 150mm right, bend 90°
-        { length: 400, angle: 90 },    // feed 400mm down, bend 90°
-        { length: 150, angle: 0 },      // feed 150mm left
+        { length: 150, angle: 90 },
+        { length: 400, angle: 90 },
+        { length: 150, angle: 0 },
       ];
     case 'bar_3':
       return [
-        { length: 150, angle: 90 },    // feed 150mm right, bend 90°
-        { length: 400, angle: 90 },    // feed 400mm down, bend 90°
-        { length: 150, angle: 90 },    // feed 150mm left, bend 90°
-        { length: 50, angle: 0 },       // feed 50mm up
+        { length: 150, angle: 90 },
+        { length: 400, angle: 90 },
+        { length: 150, angle: 90 },
+        { length: 50, angle: 0 },
       ];
     case 'custom':
       return [];

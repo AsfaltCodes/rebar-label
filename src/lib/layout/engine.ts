@@ -15,6 +15,14 @@ export interface PageLayout {
   totalPages: number;
 }
 
+function fitCount(available: number, size: number, gap: number): number {
+  const raw = (available + gap) / (size + gap);
+  const rounded = Math.round(raw);
+  const remainder = (rounded * (size + gap) - gap) - available;
+  if (rounded > 0 && remainder <= 0.1) return rounded;
+  return Math.max(1, Math.floor(raw));
+}
+
 export function calculateLayout(
   pageWidth: number,
   pageHeight: number,
@@ -30,8 +38,8 @@ export function calculateLayout(
   const usableWidth = pageWidth - marginLeft - marginRight;
   const usableHeight = pageHeight - marginTop - marginBottom;
 
-  const columns = Math.max(1, Math.floor((usableWidth + gap) / (labelWidth + gap)));
-  const rows = Math.max(1, Math.floor((usableHeight + gap) / (labelHeight + gap)));
+  const columns = fitCount(usableWidth, labelWidth, gap);
+  const rows = fitCount(usableHeight, labelHeight, gap);
   const labelsPerPage = columns * rows;
 
   const positions: LabelPosition[] = [];

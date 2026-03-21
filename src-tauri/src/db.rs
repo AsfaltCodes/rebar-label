@@ -100,6 +100,9 @@ impl AppDb {
             conn.execute(&format!("ALTER TABLE {} ADD COLUMN margin_left_mm REAL NOT NULL DEFAULT 0", table), []).ok();
             conn.execute(&format!("ALTER TABLE {} ADD COLUMN margin_right_mm REAL NOT NULL DEFAULT 0", table), []).ok();
             conn.execute(&format!("ALTER TABLE {} ADD COLUMN label_gap_mm REAL NOT NULL DEFAULT 0", table), []).ok();
+            conn.execute(&format!("ALTER TABLE {} ADD COLUMN printer_margin_mm REAL NOT NULL DEFAULT 4.5", table), []).ok();
+            conn.execute(&format!("ALTER TABLE {} ADD COLUMN length_unit TEXT NOT NULL DEFAULT 'mm'", table), []).ok();
+            conn.execute(&format!("ALTER TABLE {} ADD COLUMN field_padding_mm REAL NOT NULL DEFAULT 6", table), []).ok();
         }
 
         // Insert default settings if they don't exist

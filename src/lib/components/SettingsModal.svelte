@@ -3,25 +3,42 @@
   import { settings, updateSettings } from '$lib/stores/settingsStore';
   import { showSettingsModal } from '$lib/stores/uiStore';
   import { addToast } from '$lib/stores/toastStore';
+  import { theme, setTheme } from '$lib/stores/themeStore';
+  import { themes, SYSTEM_THEME_ID } from '$lib/themes/themes';
   import { _ } from '$lib/stores/i18n';
   import Button from './ui/Button.svelte';
   import Icon from './ui/Icon.svelte';
 
   let s = { ...$settings };
+  let selectedThemeId = $theme;
+  let previousThemeId = $theme;
+  let themePickerExpanded = false;
 
   // Re-sync local copy when the modal opens or settings change
   $: if ($showSettingsModal) {
     s = { ...$settings };
+    selectedThemeId = $theme;
+    previousThemeId = $theme;
+  }
+
+  function previewTheme(id: string) {
+    selectedThemeId = id;
+    setTheme(id);
   }
 
   function handleSave() {
     updateSettings(s);
+    // Theme is already applied via previewTheme — just persist the choice
+    previousThemeId = selectedThemeId;
     showSettingsModal.set(false);
-    // Note: Toasts are tricky to translate instantly if they fire before store updates, but we can hardcode or translate them too.
     addToast('Settings saved', 'success');
   }
 
   function handleCancel() {
+    // Revert theme if changed
+    if (selectedThemeId !== previousThemeId) {
+      setTheme(previousThemeId);
+    }
     showSettingsModal.set(false);
   }
 
@@ -102,6 +119,59 @@
               <option value="ro">Română</option>
             </select>
           </div>
+          <div class="form-group">
+            <label>{$_('settings.offer_format')}</label>
+            <select bind:value={s.offer_format}>
+              <option value="pdf">{$_('settings.offer_pdf')}</option>
+              <option value="xlsx">{$_('settings.offer_xlsx')}</option>
+            </select>
+          </div>
+        </section>
+
+        <!-- Theme -->
+        <section class="section">
+          <button
+            class="section-header-toggle"
+            on:click={() => (themePickerExpanded = !themePickerExpanded)}
+          >
+            <h3 class="section-title">{$_('settings.theme')}</h3>
+            <Icon name={themePickerExpanded ? 'chevron-up' : 'chevron-down'} size={16} />
+          </button>
+
+          {#if themePickerExpanded}
+            <div class="theme-grid">
+              <!-- System option -->
+              <button
+                class="theme-card"
+                class:active={selectedThemeId === SYSTEM_THEME_ID}
+                on:click={() => previewTheme(SYSTEM_THEME_ID)}
+              >
+                <div class="theme-swatch theme-swatch-system">
+                  <div class="swatch-half-light"></div>
+                  <div class="swatch-half-dark"></div>
+                </div>
+                <span class="theme-name">System</span>
+              </button>
+              {#each themes as t}
+                <button
+                  class="theme-card"
+                  class:active={selectedThemeId === t.id}
+                  on:click={() => previewTheme(t.id)}
+                >
+                  <div
+                    class="theme-swatch"
+                    style="background:{t.colors['--color-bg']};border-color:{t.colors['--color-border']}"
+                  >
+                    <div class="swatch-bar" style="background:{t.colors['--color-primary']}"></div>
+                    <div class="swatch-surface" style="background:{t.colors['--color-surface']}">
+                      <div class="swatch-text" style="color:{t.colors['--color-text']}">Aa</div>
+                    </div>
+                  </div>
+                  <span class="theme-name">{t.name}</span>
+                </button>
+              {/each}
+            </div>
+          {/if}
         </section>
       </div>
 
@@ -193,6 +263,30 @@
     letter-spacing: 0.5px;
     margin: 0 0 var(--space-3);
   }
+  .section-header-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    transition: color var(--transition-fast);
+  }
+  .section-header-toggle:hover {
+    color: var(--color-text-secondary);
+  }
+  .section-header-toggle .section-title {
+    margin-bottom: 0;
+  }
+  .icon-toggle {
+    transition: transform var(--transition-normal);
+  }
+  .icon-toggle.expanded {
+    transform: rotate(180deg);
+  }
 
   /* Form elements */
   .form-group {
@@ -260,5 +354,78 @@
     color: var(--color-text-faint);
     margin: var(--space-1) 0 0;
     line-height: 1.4;
+  }
+
+  /* Theme picker */
+  .theme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
+  .theme-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
+    background: none;
+    cursor: pointer;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+  }
+  .theme-card:hover {
+    background: var(--color-surface-hover);
+  }
+  .theme-card.active {
+    border-color: var(--color-primary);
+  }
+  .theme-swatch {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border-radius: var(--radius-sm);
+    border: 1px solid;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+    gap: 3px;
+  }
+  .theme-swatch-system {
+    flex-direction: row;
+    padding: 0;
+    gap: 0;
+    border-color: var(--color-border);
+  }
+  .swatch-half-light {
+    flex: 1;
+    background: #f1f5f9;
+  }
+  .swatch-half-dark {
+    flex: 1;
+    background: #161413;
+  }
+  .swatch-bar {
+    height: 4px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .swatch-surface {
+    flex: 1;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .swatch-text {
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .theme-name {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    text-align: center;
+    line-height: 1.2;
   }
 </style>

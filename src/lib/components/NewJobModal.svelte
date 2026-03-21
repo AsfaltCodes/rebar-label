@@ -49,8 +49,8 @@
       const { db } = await import('$lib/db/api');
 
       const page_size = selectedTemplate?.page_size || 'A4';
-      const page_width_mm = selectedTemplate?.page_width_mm || 210;
-      const page_height_mm = selectedTemplate?.page_height_mm || 297;
+      const page_width_mm = selectedTemplate?.page_width_mm || 209;
+      const page_height_mm = selectedTemplate?.page_height_mm || 295.275;
       const page_orientation = selectedTemplate?.page_orientation || 'portrait';
 
       const fields = selectedTemplate ? [...selectedTemplate.fields] : [];
@@ -78,6 +78,9 @@
         margin_left_mm: selectedTemplate?.margin_left_mm || 0,
         margin_right_mm: selectedTemplate?.margin_right_mm || 0,
         label_gap_mm: selectedTemplate?.label_gap_mm || 0,
+        printer_margin_mm: selectedTemplate?.printer_margin_mm ?? 4.5,
+        field_padding_mm: selectedTemplate?.field_padding_mm ?? 6,
+        length_unit: selectedTemplate?.length_unit || 'mm',
       });
 
       // Create first blank label

@@ -16,6 +16,7 @@
   export let scale: number = 1; // mm to px
   export let labelNumber: number | null = null;
   export let clientName: string = '';
+  export let lengthUnit: string = 'mm';
 
   $: pxW = widthMm * scale;
   $: pxH = heightMm * scale;
@@ -77,7 +78,7 @@
     const computed: Record<string, string> = {};
     for (const f of fields) {
       if (f.source === 'total_length' && totalLen > 0) {
-        computed[f.label] = `${totalLen} mm`;
+        computed[f.label] = `${totalLen} ${lengthUnit}`;
       }
       if (f.source === 'client_name' && client) {
         computed[f.label] = client;
@@ -132,27 +133,28 @@
   </div>
 
   {#if hasShape && shapeData}
-    {@const boundsSpan = Math.max(shapeData.bounds.maxX - shapeData.bounds.minX, shapeData.bounds.maxY - shapeData.bounds.minY)}
     <div class="shape-zone" style="flex:{shapeFlex}">
       <svg width="100%" height="100%" viewBox={shapeViewBox} preserveAspectRatio="xMidYMid meet">
         <path
           d={shapeData.pathD}
           fill="none"
           style="stroke: var(--color-shape-stroke)"
-          stroke-width={Math.max(3, boundsSpan * 0.025)}
+          stroke-width={Math.max(3, shapeData.shapeDim * 0.025)}
           stroke-linecap="round"
           stroke-linejoin="round"
         />
         {#each shapeData.segmentMidpoints as mp}
-          <text
-            x={mp.labelX}
-            y={mp.labelY}
-            text-anchor="middle"
-            dominant-baseline="middle"
-            font-size={Math.max(8, boundsSpan * 0.08)}
-            style="fill: var(--color-shape-label)"
-            font-family="Inter, sans-serif"
-          >{mp.length}</text>
+          {#if mp.length > 0}
+            <text
+              x={mp.labelX}
+              y={mp.labelY}
+              text-anchor="middle"
+              dominant-baseline="middle"
+              font-size={Math.max(8, shapeData.shapeDim * 0.14)}
+              style="fill: var(--color-shape-label)"
+              font-family="Inter, sans-serif"
+            >{mp.length}</text>
+          {/if}
         {/each}
       </svg>
     </div>

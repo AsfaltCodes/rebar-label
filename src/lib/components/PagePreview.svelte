@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { currentJob, labels, selectedLabelId, selectedLabelIds } from '$lib/stores/jobStore';
   import { settings } from '$lib/stores/settingsStore';
   import { currentPage } from '$lib/stores/uiStore';
@@ -13,8 +14,8 @@
   $: page = $currentPage;
 
   // Calculate page dimensions
-  $: pageW = job ? job.page_width_mm : 210;
-  $: pageH = job ? job.page_height_mm : 297;
+  $: pageW = job ? job.page_width_mm : 209;
+  $: pageH = job ? job.page_height_mm : 295.275;
 
   // Grid mode: derive label dimensions from columns × rows
   $: gridDims = job?.sizing_mode === 'grid'
@@ -57,16 +58,17 @@
     ? layout.positions.filter(p => p.page === page)
     : [];
 
-  // Auto-navigate to the page containing the selected label
-  $: if (layout && $selectedLabelId !== null) {
-    const labelIdx = allLabels.findIndex(l => l.id === $selectedLabelId);
-    if (labelIdx >= 0) {
-      const pos = layout.positions.find(p => p.labelIndex === labelIdx);
-      if (pos && pos.page !== page) {
-        currentPage.set(pos.page);
-      }
+  // Auto-navigate to the page containing the selected label (only fires on selection change)
+  const unsubNav = selectedLabelId.subscribe((selId) => {
+    if (selId === null || !layout) return;
+    const labelIdx = allLabels.findIndex(l => l.id === selId);
+    if (labelIdx < 0) return;
+    const pos = layout.positions.find(p => p.labelIndex === labelIdx);
+    if (pos && pos.page !== $currentPage) {
+      currentPage.set(pos.page);
     }
-  }
+  });
+  onDestroy(unsubNav);
 
   let lastSelectedIdx = 0;
 
@@ -154,6 +156,7 @@
                 companyPhone={s.company_phone}
                 labelNumber={null}
                 clientName={job.client_name || ''}
+                lengthUnit={job.length_unit || 'mm'}
                 on:click={(e) => handleSelectLabel(e, pos.labelIndex)}
                 on:contextmenu={(e) => handleContextMenu(e, pos.labelIndex)}
               />

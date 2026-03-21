@@ -1,53 +1,93 @@
-import { writable, get } from 'svelte/store';
-
-export type Theme = 'system' | 'light' | 'dark';
+import { writable, derived, get } from 'svelte/store';
+import { themes, SYSTEM_THEME_ID, getThemeById, type ThemePalette } from '$lib/themes/themes';
 
 const STORAGE_KEY = 'theme';
 
-export const theme = writable<Theme>('system');
+// Migration map: old values → new theme IDs
+const MIGRATION: Record<string, string> = {
+  light: 'eisenlabel-light',
+  dark: 'eisenlabel-dark',
+  system: SYSTEM_THEME_ID,
+};
 
-/** The resolved theme actually applied (always 'light' or 'dark') */
+/** The selected theme ID (e.g. 'dracula', 'nord', 'system') */
+export const theme = writable<string>(SYSTEM_THEME_ID);
+
+/** The resolved theme type actually applied (always 'light' or 'dark') */
 export const resolvedTheme = writable<'light' | 'dark'>('light');
 
-function resolve(t: Theme): 'light' | 'dark' {
-  if (t === 'system') {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+/** The resolved palette currently applied */
+export const resolvedPalette = derived(
+  resolvedTheme,
+  ($resolved) => {
+    const current = get(theme);
+    if (current === SYSTEM_THEME_ID) {
+      return $resolved === 'dark'
+        ? getThemeById('eisenlabel-dark')!
+        : getThemeById('eisenlabel-light')!;
+    }
+    return getThemeById(current) ?? getThemeById('eisenlabel-light')!;
   }
-  return t;
+);
+
+function getSystemPalette(): ThemePalette {
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  return prefersDark
+    ? getThemeById('eisenlabel-dark')!
+    : getThemeById('eisenlabel-light')!;
 }
 
-function apply(t: Theme): void {
-  const resolved = resolve(t);
-  document.documentElement.setAttribute('data-theme', resolved);
-  resolvedTheme.set(resolved);
+function applyPalette(palette: ThemePalette): void {
+  const root = document.documentElement;
+  for (const [key, value] of Object.entries(palette.colors)) {
+    root.style.setProperty(key, value);
+  }
+  resolvedTheme.set(palette.type);
+}
+
+function applyThemeId(id: string): void {
+  if (id === SYSTEM_THEME_ID) {
+    applyPalette(getSystemPalette());
+  } else {
+    const palette = getThemeById(id);
+    if (palette) {
+      applyPalette(palette);
+    } else {
+      // Fallback to system
+      applyPalette(getSystemPalette());
+    }
+  }
 }
 
 /** Set theme preference, persist to localStorage, and apply */
-export function setTheme(t: Theme): void {
-  theme.set(t);
-  localStorage.setItem(STORAGE_KEY, t);
-  apply(t);
-}
-
-/** Cycle: system → dark → light → system */
-export function cycleTheme(): void {
-  const current = get(theme);
-  const next: Theme = current === 'system' ? 'dark' : current === 'dark' ? 'light' : 'system';
-  setTheme(next);
+export function setTheme(id: string): void {
+  theme.set(id);
+  localStorage.setItem(STORAGE_KEY, id);
+  applyThemeId(id);
 }
 
 /** Call once on app startup (in onMount) */
 export function initTheme(): void {
-  const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-  const initial: Theme = stored && ['system', 'light', 'dark'].includes(stored) ? stored : 'system';
+  let stored = localStorage.getItem(STORAGE_KEY);
 
-  theme.set(initial);
-  apply(initial);
+  // Migrate old values
+  if (stored && stored in MIGRATION) {
+    stored = MIGRATION[stored];
+    localStorage.setItem(STORAGE_KEY, stored);
+  }
+
+  // Validate stored ID exists
+  const id = stored && (stored === SYSTEM_THEME_ID || getThemeById(stored))
+    ? stored
+    : SYSTEM_THEME_ID;
+
+  theme.set(id);
+  applyThemeId(id);
 
   // Listen for OS theme changes when in 'system' mode
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    if (get(theme) === 'system') {
-      apply('system');
+    if (get(theme) === SYSTEM_THEME_ID) {
+      applyThemeId(SYSTEM_THEME_ID);
     }
   });
 }

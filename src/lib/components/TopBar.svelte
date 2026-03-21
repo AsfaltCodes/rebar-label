@@ -1,12 +1,12 @@
 <script lang="ts">
   import { currentScreen, showSettingsModal } from '$lib/stores/uiStore';
   import { currentJob } from '$lib/stores/jobStore';
-  import { theme, cycleTheme, resolvedTheme } from '$lib/stores/themeStore';
   import { _ } from '$lib/stores/i18n';
   import Icon from './ui/Icon.svelte';
   import logo from '$lib/assets/logo.svg';
 
   export let onPrint: () => void = () => {};
+  export let onExportOffer: () => void = () => {};
 
   function goToJobs() {
     currentScreen.set('jobs');
@@ -58,26 +58,19 @@
   </nav>
 
   <div class="actions">
-    <button class="icon-btn" on:click={openSettings} title={$_('nav.settings')}>
-      <Icon name="settings" size={18} />
-    </button>
-    <button
-      class="icon-btn"
-      on:click={cycleTheme}
-      title={$theme === 'system' ? 'Theme: System' : $theme === 'dark' ? 'Theme: Dark' : 'Theme: Light'}
-    >
-      {#if $resolvedTheme === 'dark'}
-        <Icon name="sun" size={18} />
-      {:else}
-        <Icon name="moon" size={18} />
-      {/if}
-    </button>
     {#if $currentScreen === 'editor' && $currentJob}
+      <button class="offer-btn" on:click={onExportOffer}>
+        <Icon name="file-text" size={16} />
+        {$_('topbar.export_offer')}
+      </button>
       <button class="print-btn" on:click={onPrint}>
         <Icon name="printer" size={16} />
         {$_('topbar.print')}
       </button>
     {/if}
+    <button class="icon-btn" on:click={openSettings} title={$_('nav.settings')}>
+      <Icon name="settings" size={18} />
+    </button>
   </div>
 </header>
 
@@ -88,7 +81,7 @@
     padding: 0 var(--space-4);
     height: 48px;
     background: var(--color-topbar);
-    color: var(--color-text-inverse);
+    color: #ffffff;
     gap: var(--space-4);
     flex-shrink: 0;
     z-index: var(--z-topbar);
@@ -132,11 +125,11 @@
   }
   .nav-btn:hover {
     background: var(--color-topbar-hover);
-    color: var(--color-text-inverse);
+    color: #ffffff;
   }
   .nav-btn.active {
     background: var(--color-topbar-active);
-    color: var(--color-text-inverse);
+    color: #ffffff;
   }
   .dropdown {
     position: relative;
@@ -281,6 +274,24 @@
   .icon-btn:hover {
     background: var(--color-topbar-hover);
     color: var(--color-text-inverse);
+  }
+  .offer-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-4);
+    background: var(--color-info, #3b82f6);
+    color: var(--color-text-inverse);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    min-height: 32px;
+  }
+  .offer-btn:hover {
+    background: var(--color-info-hover, #2563eb);
   }
   .print-btn {
     display: flex;

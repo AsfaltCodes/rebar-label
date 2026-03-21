@@ -1,7 +1,7 @@
 <script lang="ts">
   import { currentScreen, showNewJobModal, showSettingsModal } from '$lib/stores/uiStore';
   import { currentJob, selectedLabelId, createNewLabel, duplicateLabel, deleteLabel } from '$lib/stores/jobStore';
-  import { theme, setTheme } from '$lib/stores/themeStore';
+  import { undo, redo, canUndo, canRedo } from '$lib/stores/historyStore';
   import { _ } from '$lib/stores/i18n';
   import Icon from './ui/Icon.svelte';
   import { onMount } from 'svelte';
@@ -9,6 +9,7 @@
   export let jobs: { id: number; name: string; created_at: string; labelCount: number }[] = [];
   export let onSelectJob: (id: number) => void = () => {};
   export let onPrint: () => void = () => {};
+  export let onExportOffer: () => void = () => {};
   export let onDeleteJob: (id: number) => void = () => {};
 
   type MenuItem = {
@@ -56,15 +57,16 @@
     await appWindow?.close();
   }
 
-  $: menus = buildMenus($currentJob, $selectedLabelId, $currentScreen, $theme, jobs, $_);
+  $: menus = buildMenus($currentJob, $selectedLabelId, $currentScreen, jobs, $_, $canUndo, $canRedo);
 
   function buildMenus(
     job: typeof $currentJob,
     selId: typeof $selectedLabelId,
     screen: typeof $currentScreen,
-    currentTheme: typeof $theme,
     allJobs: typeof jobs,
-    t: typeof $_
+    t: typeof $_,
+    undoEnabled: boolean,
+    redoEnabled: boolean
   ) {
     return [
       {
@@ -81,6 +83,7 @@
           },
           { separator: true } as MenuItem,
           { label: t('topbar.print'), shortcut: 'Ctrl+P', action: () => onPrint(), disabled: !job },
+          { label: t('topbar.export_offer'), action: () => onExportOffer(), disabled: !job },
           { separator: true } as MenuItem,
           { label: t('nav.settings'), action: () => showSettingsModal.set(true) },
           { separator: true } as MenuItem,
@@ -90,6 +93,9 @@
       {
         label: 'Edit',
         items: [
+          { label: 'Undo', shortcut: 'Ctrl+Z', action: () => undo(), disabled: !undoEnabled },
+          { label: 'Redo', shortcut: 'Ctrl+Y', action: () => redo(), disabled: !redoEnabled },
+          { separator: true } as MenuItem,
           { label: 'New Label', shortcut: 'Ctrl+L', action: () => createNewLabel(), disabled: !job },
           { label: 'Duplicate Label', shortcut: 'Ctrl+D', action: () => { if (selId) duplicateLabel(selId); }, disabled: !selId },
           { label: 'Delete Label', shortcut: 'Del', action: () => { if (selId) deleteLabel(selId); }, disabled: !selId },
@@ -101,12 +107,6 @@
           { label: 'Editor', action: () => currentScreen.set('editor'), checked: screen === 'editor' },
           { label: t('nav.jobs'), action: () => currentScreen.set('jobs'), checked: screen === 'jobs' },
           { label: t('nav.templates'), action: () => currentScreen.set('templates'), checked: screen === 'templates' },
-          { separator: true } as MenuItem,
-          { label: 'Theme', submenu: [
-            { label: 'System', action: () => setTheme('system'), checked: currentTheme === 'system' },
-            { label: 'Light', action: () => setTheme('light'), checked: currentTheme === 'light' },
-            { label: 'Dark', action: () => setTheme('dark'), checked: currentTheme === 'dark' },
-          ]},
         ] as MenuItem[],
       },
       {
@@ -147,7 +147,13 @@
     // Keyboard Shortcuts
     if (e.ctrlKey) {
       const key = e.key.toLowerCase();
-      if (key === 'n') {
+      if (key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        redo();
+      } else if (key === 'n') {
         e.preventDefault();
         showNewJobModal.set(true);
       } else if (key === 'p') {

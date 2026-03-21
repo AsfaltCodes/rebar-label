@@ -13,13 +13,19 @@ export function generatePdf(
   const pageW = job.page_width_mm;
   const pageH = job.page_height_mm;
 
+  // Add printer hardware margin to software margins
+  const pm = job.printer_margin_mm ?? 4.5;
+  const effMT = (job.margin_top_mm || 0) + pm;
+  const effMB = (job.margin_bottom_mm || 0) + pm;
+  const effML = (job.margin_left_mm || 0) + pm;
+  const effMR = (job.margin_right_mm || 0) + pm;
+
   // Grid mode: derive label dimensions from columns × rows
   let labelW: number, labelH: number;
   if (job.sizing_mode === 'grid') {
     const dims = calculateLabelDimensions(
       pageW, pageH,
-      job.margin_top_mm || 0, job.margin_bottom_mm || 0,
-      job.margin_left_mm || 0, job.margin_right_mm || 0,
+      effMT, effMB, effML, effMR,
       job.label_gap_mm || 0, job.columns, job.rows
     );
     labelW = dims.width;
@@ -31,8 +37,7 @@ export function generatePdf(
 
   const layout = calculateLayout(
     pageW, pageH,
-    job.margin_top_mm || 0, job.margin_bottom_mm || 0,
-    job.margin_left_mm || 0, job.margin_right_mm || 0,
+    effMT, effMB, effML, effMR,
     labelW, labelH,
     job.label_gap_mm || 0,
     labels.map(l => ({ copies: l.copies }))
@@ -59,7 +64,7 @@ export function generatePdf(
       const label = labels[pos.labelIndex];
       if (!label) continue;
 
-      drawLabel(doc, pos.x, pos.y, labelW, labelH, label, job.fields, job.job_field_values || {}, job.logo_enabled, logoDataUrl, job.phone_enabled, settings.company_phone, pos.globalIndex + 1, job.client_name);
+      drawLabel(doc, pos.x, pos.y, labelW, labelH, label, job.fields, job.job_field_values || {}, job.logo_enabled, logoDataUrl, job.phone_enabled, settings.company_phone, pos.globalIndex + 1, job.client_name, job.length_unit || 'mm', job.field_padding_mm ?? 6);
     }
 
     // Fill remaining slots on this page with blank labels
@@ -67,9 +72,9 @@ export function generatePdf(
     for (let slot = filledSlots; slot < layout.labelsPerPage; slot++) {
       const col = slot % layout.columns;
       const row = Math.floor(slot / layout.columns);
-      const blankX = (job.margin_left_mm || 0) + col * (labelW + (job.label_gap_mm || 0));
-      const blankY = (job.margin_top_mm || 0) + row * (labelH + (job.label_gap_mm || 0));
-      drawBlankLabel(doc, blankX, blankY, labelW, labelH, job.fields, job.logo_enabled, logoDataUrl, job.phone_enabled, settings.company_phone);
+      const blankX = effML + col * (labelW + (job.label_gap_mm || 0));
+      const blankY = effMT + row * (labelH + (job.label_gap_mm || 0));
+      drawBlankLabel(doc, blankX, blankY, labelW, labelH, job.fields, job.logo_enabled, logoDataUrl, job.phone_enabled, settings.company_phone, job.field_padding_mm ?? 6);
     }
   }
 
@@ -90,7 +95,9 @@ function drawLabel(
   phoneEnabled: boolean = false,
   companyPhone: string = '',
   labelNumber?: number,
-  clientName?: string
+  clientName?: string,
+  lengthUnit: string = 'mm',
+  fieldPadding: number = 6
 ) {
   // Compute total length from shape segments
   const totalLength = label.shape_segments?.length
@@ -101,10 +108,13 @@ function drawLabel(
   const computedValues: Record<string, string> = {};
   for (const f of fields) {
     if (f.source === 'total_length' && totalLength > 0) {
-      computedValues[f.label] = `${totalLength} mm`;
+      computedValues[f.label] = `${totalLength} ${lengthUnit}`;
     }
     if (f.source === 'client_name' && clientName) {
       computedValues[f.label] = clientName;
+    }
+    if (f.source === 'buc' && !label.field_values?.[f.label]) {
+      computedValues[f.label] = String(label.copies || 1);
     }
   }
 
@@ -116,9 +126,9 @@ function drawLabel(
   doc.rect(x, y, w, h);
 
   let currentY = y + 1.5;
-  const leftPad = x + 1.5;
-  const rightPad = x + w - 1.5;
-  const innerW = w - 3;
+  const leftPad = x + fieldPadding;
+  const rightPad = x + w - fieldPadding;
+  const innerW = w - fieldPadding * 2;
 
   // Zone 1: Logo + Phone
   if (logoEnabled && logoDataUrl) {
@@ -133,11 +143,11 @@ function drawLabel(
 
   // Phone number (below logo or at top if no logo)
   if (phoneEnabled && companyPhone) {
-    doc.setFontSize(7);
+    doc.setFontSize(9);
     doc.setTextColor(0);
     doc.setFont('Helvetica', 'bold');
-    doc.text(companyPhone, x + w / 2, currentY + 2, { align: 'center' });
-    currentY += 3;
+    doc.text(companyPhone, x + w / 2, currentY + 3, { align: 'center' });
+    currentY += 4;
   }
 
   // Separator after logo/phone zone
@@ -268,15 +278,8 @@ function drawLabel(
         doc.setFontSize(10);
         doc.setFont('Helvetica', 'bold');
         doc.setTextColor(0);
-        const dist_mm = 2.4; // Consistent close distance from the line
         for (const mp of renderData.segmentMidpoints) {
-          // Calculate normalized outward vector based on the labelOffsetAngle
-          const rad = (mp.labelOffsetAngle * Math.PI) / 180;
-          
-          // Re-calculate the anchor point (midpoint/tip-shifted) by removing the renderer's offset
-          // Wait, I updated the renderer to include the offset in labelX/Y.
-          // Let's just calculate the anchor directly to be 100% sure.
-          
+          if (mp.length <= 0) continue;
           const finalX = (offsetX + mp.labelX * shapeSc);
           const finalY = (offsetY + mp.labelY * shapeSc);
           
@@ -294,9 +297,9 @@ function drawLabel(
 
   // Label counter at bottom-center
   if (labelNumber !== undefined) {
-    doc.setFontSize(7);
+    doc.setFontSize(10);
     doc.setTextColor(0);
-    doc.setFont('Helvetica', 'normal');
+    doc.setFont('Helvetica', 'bold');
     doc.text(String(labelNumber), x + w / 2, y + h - 1, { align: 'center' });
   }
 }
@@ -311,7 +314,8 @@ function drawBlankLabel(
   logoEnabled: boolean,
   logoDataUrl: string | null,
   phoneEnabled: boolean = false,
-  companyPhone: string = ''
+  companyPhone: string = '',
+  fieldPadding: number = 6
 ) {
   // Border
   doc.setDrawColor(150);
@@ -319,9 +323,9 @@ function drawBlankLabel(
   doc.rect(x, y, w, h);
 
   let currentY = y + 1.5;
-  const leftPad = x + 1.5;
-  const rightPad = x + w - 1.5;
-  const innerW = w - 3;
+  const leftPad = x + fieldPadding;
+  const rightPad = x + w - fieldPadding;
+  const innerW = w - fieldPadding * 2;
 
   // Zone 1: Logo + Phone (same as filled label)
   if (logoEnabled && logoDataUrl) {
@@ -335,11 +339,11 @@ function drawBlankLabel(
   }
 
   if (phoneEnabled && companyPhone) {
-    doc.setFontSize(7);
+    doc.setFontSize(9);
     doc.setTextColor(0);
     doc.setFont('Helvetica', 'bold');
-    doc.text(companyPhone, x + w / 2, currentY + 2, { align: 'center' });
-    currentY += 3;
+    doc.text(companyPhone, x + w / 2, currentY + 3, { align: 'center' });
+    currentY += 4;
   }
 
   if ((logoEnabled && logoDataUrl) || (phoneEnabled && companyPhone)) {
@@ -424,6 +428,7 @@ export async function exportPdf(
     if ('__TAURI__' in window) {
       const { save } = await import('@tauri-apps/plugin-dialog');
       const { writeFile } = await import('@tauri-apps/plugin-fs');
+      const { open } = await import('@tauri-apps/plugin-shell');
 
       const path = await save({
         filters: [{ name: 'PDF', extensions: ['pdf'] }],
@@ -433,6 +438,7 @@ export async function exportPdf(
       if (path) {
         const bytes = new Uint8Array(await pdfBlob.arrayBuffer());
         await writeFile(path, bytes);
+        await open(path);
       }
       return;
     }

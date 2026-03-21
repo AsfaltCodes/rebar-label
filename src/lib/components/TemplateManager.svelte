@@ -45,16 +45,24 @@
         await db.createTemplate({
           name: data.name || 'Untitled',
           sizing_mode: data.sizing_mode || 'grid',
-          columns: data.columns || 2,
-          rows: data.rows || 5,
-          label_width_mm: data.label_width_mm || 80,
-          label_height_mm: data.label_height_mm || 50,
+          columns: data.columns || 4,
+          rows: data.rows || 2,
+          label_width_mm: data.label_width_mm || 73.82,
+          label_height_mm: data.label_height_mm || 104.5,
           logo_enabled: data.logo_enabled || false,
           phone_enabled: data.phone_enabled || false,
           page_size: data.page_size || 'A4',
-          page_width_mm: data.page_width_mm || 210,
-          page_height_mm: data.page_height_mm || 297,
-          page_orientation: data.page_orientation || 'portrait',
+          page_width_mm: data.page_width_mm || 209,
+          page_height_mm: data.page_height_mm || 295.275,
+          page_orientation: data.page_orientation || 'landscape',
+          margin_top_mm: data.margin_top_mm || 0,
+          margin_bottom_mm: data.margin_bottom_mm || 0,
+          margin_left_mm: data.margin_left_mm || 0,
+          margin_right_mm: data.margin_right_mm || 0,
+          label_gap_mm: data.label_gap_mm || 0,
+          printer_margin_mm: data.printer_margin_mm ?? 4.5,
+          field_padding_mm: data.field_padding_mm ?? 6,
+          length_unit: data.length_unit || 'mm',
           fields: data.fields || [],
         });
         addToast('Template created', 'success');
@@ -79,16 +87,24 @@
       await db.createTemplate({
         name: `${t.name} (copy)`,
         sizing_mode: t.sizing_mode || 'grid',
-        columns: t.columns || 2,
-        rows: t.rows || 5,
+        columns: t.columns || 4,
+        rows: t.rows || 2,
         label_width_mm: t.label_width_mm,
         label_height_mm: t.label_height_mm,
         logo_enabled: t.logo_enabled,
         phone_enabled: t.phone_enabled || false,
         page_size: t.page_size || 'A4',
-        page_width_mm: t.page_width_mm || 210,
-        page_height_mm: t.page_height_mm || 297,
-        page_orientation: t.page_orientation || 'portrait',
+        page_width_mm: t.page_width_mm || 209,
+        page_height_mm: t.page_height_mm || 295.275,
+        page_orientation: t.page_orientation || 'landscape',
+        margin_top_mm: t.margin_top_mm || 0,
+        margin_bottom_mm: t.margin_bottom_mm || 0,
+        margin_left_mm: t.margin_left_mm || 0,
+        margin_right_mm: t.margin_right_mm || 0,
+        label_gap_mm: t.label_gap_mm || 0,
+        printer_margin_mm: t.printer_margin_mm ?? 4.5,
+        field_padding_mm: t.field_padding_mm ?? 6,
+        length_unit: t.length_unit || 'mm',
         fields: t.fields,
       });
       await loadTemplates();
@@ -119,7 +135,7 @@
 <div class="template-manager">
   {#if editing || creating}
     <TemplateEditor
-      template={editing || { name: '', label_width_mm: 80, label_height_mm: 50, logo_enabled: false, page_size: 'A4', page_orientation: 'portrait', fields: [] }}
+      template={editing || { name: '', sizing_mode: 'grid', columns: 4, rows: 2, label_width_mm: 73.82, label_height_mm: 104.5, logo_enabled: false, page_size: 'A4', page_width_mm: 209, page_height_mm: 295.275, page_orientation: 'landscape', fields: [] }}
       onSave={handleSave}
       onCancel={handleCancel}
     />

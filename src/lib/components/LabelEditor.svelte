@@ -119,10 +119,11 @@
         shapePreset={label.shape_preset}
         segments={label.shape_segments}
         onChange={handleShapeChange}
+        lengthUnit={job?.length_unit || 'mm'}
       />
       {#if totalLength > 0}
         <div class="total-length">
-          {$_('lbl_edit.total_length')} <strong>{totalLength} mm</strong>
+          {$_('lbl_edit.total_length')} <strong>{totalLength} {job?.length_unit || 'mm'}</strong>
         </div>
       {/if}
     </div>

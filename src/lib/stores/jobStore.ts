@@ -1,6 +1,7 @@
 import { writable, derived, get } from 'svelte/store';
 import type { Job, Label, FieldDef } from '$lib/db/types';
 import { markSaving, markSaved, markError } from './saveStatusStore';
+import { pushState, clearHistory } from './historyStore';
 
 export const currentJob = writable<Job | null>(null);
 export const labels = writable<Label[]>([]);
@@ -22,6 +23,13 @@ function debouncedSave(fn: () => Promise<void>, delay = 500): void {
   saveTimeout = setTimeout(fn, delay);
 }
 
+export function cancelDebouncedSave(): void {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+    saveTimeout = null;
+  }
+}
+
 export async function loadJob(jobId: number): Promise<void> {
   try {
     const { db } = await import('$lib/db/api');
@@ -37,6 +45,7 @@ export async function loadJob(jobId: number): Promise<void> {
       selectedLabelId.set(null);
       selectedLabelIds.set(new Set());
     }
+    clearHistory();
   } catch (e) {
     console.error('Failed to load job:', e);
   }
@@ -45,6 +54,8 @@ export async function loadJob(jobId: number): Promise<void> {
 export async function createNewLabel(): Promise<void> {
   const job = get(currentJob);
   if (!job) return;
+
+  pushState('Create label');
 
   try {
     const { db } = await import('$lib/db/api');
@@ -75,6 +86,8 @@ export async function createNewLabel(): Promise<void> {
 }
 
 export async function deleteLabels(ids: number[]): Promise<void> {
+  pushState('Delete label');
+
   try {
     const { db } = await import('$lib/db/api');
     for (const id of ids) {
@@ -83,7 +96,7 @@ export async function deleteLabels(ids: number[]): Promise<void> {
 
     labels.update(ls => {
       const filtered = ls.filter(l => !ids.includes(l.id));
-      
+
       const selIds = get(selectedLabelIds);
       ids.forEach(id => selIds.delete(id));
       selectedLabelIds.set(selIds);
@@ -112,6 +125,8 @@ export async function deleteLabel(id: number): Promise<void> {
 export async function duplicateLabel(sourceId: number): Promise<void> {
   const job = get(currentJob);
   if (!job) return;
+
+  pushState('Duplicate label');
 
   try {
     const { db } = await import('$lib/db/api');
@@ -153,6 +168,8 @@ export function updateSelectedLabel(changes: Partial<Label>): void {
   const selId = get(selectedLabelId);
   if (selId === null) return;
 
+  pushState('Update label');
+
   labels.update(ls =>
     ls.map(l => (l.id === selId ? { ...l, ...changes } : l))
   );
@@ -172,6 +189,8 @@ export function updateSelectedLabel(changes: Partial<Label>): void {
 }
 
 export function updateLabelById(id: number, changes: Partial<Label>): void {
+  pushState('Update label');
+
   labels.update(ls =>
     ls.map(l => (l.id === id ? { ...l, ...changes } : l))
   );
@@ -192,6 +211,8 @@ export function updateLabelById(id: number, changes: Partial<Label>): void {
 export async function updateJob(changes: Partial<Job>): Promise<void> {
   const job = get(currentJob);
   if (!job) return;
+
+  pushState('Update job');
 
   currentJob.update(j => (j ? { ...j, ...changes } : j));
 

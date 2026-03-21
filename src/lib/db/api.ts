@@ -1,5 +1,29 @@
 import { type Template, type Job, type Label, type AppSettings, DEFAULT_SETTINGS, type FieldDef } from './types';
 
+/**
+ * Migration helper: Replace old diameter symbol ⌀ with new Ø in field labels and values.
+ */
+function fixFields(fields: FieldDef[]): FieldDef[] {
+  return (fields || []).map(f => {
+    if (f.label === '\u2300' || f.label === '⌀') {
+      return { ...f, label: 'Ø' };
+    }
+    return f;
+  });
+}
+
+function fixFieldValues(values: Record<string, string>): Record<string, string> {
+  const newValues: Record<string, string> = {};
+  for (const [k, v] of Object.entries(values || {})) {
+    if (k === '\u2300' || k === '⌀') {
+      newValues['Ø'] = v;
+    } else {
+      newValues[k] = v;
+    }
+  }
+  return newValues;
+}
+
 // Check if running inside Tauri
 function isTauri(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -23,11 +47,12 @@ class LocalDB {
 
   // Templates
   async listTemplates(): Promise<Template[]> {
-    return this.getStore<Template>('templates');
+    return this.getStore<Template>('templates').map(t => ({ ...t, fields: fixFields(t.fields) }));
   }
 
   async getTemplate(id: number): Promise<Template | null> {
-    return this.getStore<Template>('templates').find(t => t.id === id) || null;
+    const t = this.getStore<Template>('templates').find(t => t.id === id) || null;
+    return t ? { ...t, fields: fixFields(t.fields) } : null;
   }
 
   async createTemplate(data: Omit<Template, 'id' | 'created_at' | 'updated_at'>): Promise<Template> {
@@ -36,7 +61,7 @@ class LocalDB {
     const template: Template = { ...data, id: this.nextId('templates'), created_at: now, updated_at: now };
     templates.push(template);
     this.setStore('templates', templates);
-    return template;
+    return { ...template, fields: fixFields(template.fields) };
   }
 
   async updateTemplate(id: number, data: Partial<Omit<Template, 'id' | 'created_at' | 'updated_at'>>): Promise<Template> {
@@ -45,7 +70,8 @@ class LocalDB {
     if (idx === -1) throw new Error(`Template ${id} not found`);
     templates[idx] = { ...templates[idx], ...data, updated_at: new Date().toISOString() };
     this.setStore('templates', templates);
-    return templates[idx];
+    const updated = templates[idx];
+    return { ...updated, fields: fixFields(updated.fields) };
   }
 
   async deleteTemplate(id: number): Promise<void> {
@@ -55,12 +81,21 @@ class LocalDB {
 
   // Jobs
   async listJobs(): Promise<Job[]> {
-    return this.getStore<Job>('jobs').map(j => ({ ...j, job_field_values: j.job_field_values || {} }));
+    return this.getStore<Job>('jobs').map(j => ({ 
+      ...j, 
+      fields: fixFields(j.fields), 
+      job_field_values: fixFieldValues(j.job_field_values || {}) 
+    }));
   }
 
   async getJob(id: number): Promise<Job | null> {
     const job = this.getStore<Job>('jobs').find(j => j.id === id) || null;
-    return job ? { ...job, job_field_values: job.job_field_values || {} } : null;
+    if (!job) return null;
+    return { 
+      ...job, 
+      fields: fixFields(job.fields), 
+      job_field_values: fixFieldValues(job.job_field_values || {}) 
+    };
   }
 
   async createJob(data: Omit<Job, 'id' | 'created_at' | 'updated_at'>): Promise<Job> {
@@ -69,7 +104,11 @@ class LocalDB {
     const job: Job = { ...data, id: this.nextId('jobs'), created_at: now, updated_at: now };
     jobs.push(job);
     this.setStore('jobs', jobs);
-    return job;
+    return { 
+      ...job, 
+      fields: fixFields(job.fields), 
+      job_field_values: fixFieldValues(job.job_field_values || {}) 
+    };
   }
 
   async updateJob(id: number, data: Partial<Omit<Job, 'id' | 'created_at' | 'updated_at'>>): Promise<Job> {
@@ -78,7 +117,12 @@ class LocalDB {
     if (idx === -1) throw new Error(`Job ${id} not found`);
     jobs[idx] = { ...jobs[idx], ...data, updated_at: new Date().toISOString() };
     this.setStore('jobs', jobs);
-    return jobs[idx];
+    const updated = jobs[idx];
+    return { 
+      ...updated, 
+      fields: fixFields(updated.fields), 
+      job_field_values: fixFieldValues(updated.job_field_values || {}) 
+    };
   }
 
   async deleteJob(id: number): Promise<void> {
@@ -91,7 +135,10 @@ class LocalDB {
 
   // Labels
   async listLabels(jobId: number): Promise<Label[]> {
-    return this.getStore<Label>('labels').filter(l => l.job_id === jobId).sort((a, b) => a.sort_order - b.sort_order);
+    return this.getStore<Label>('labels')
+      .filter(l => l.job_id === jobId)
+      .map(l => ({ ...l, field_values: fixFieldValues(l.field_values || {}) }))
+      .sort((a, b) => a.sort_order - b.sort_order);
   }
 
   async createLabel(data: Omit<Label, 'id'>): Promise<Label> {
@@ -99,7 +146,7 @@ class LocalDB {
     const label: Label = { ...data, id: this.nextId('labels') };
     labels.push(label);
     this.setStore('labels', labels);
-    return label;
+    return { ...label, field_values: fixFieldValues(label.field_values || {}) };
   }
 
   async updateLabel(id: number, data: Partial<Omit<Label, 'id'>>): Promise<Label> {
@@ -108,7 +155,8 @@ class LocalDB {
     if (idx === -1) throw new Error(`Label ${id} not found`);
     labels[idx] = { ...labels[idx], ...data };
     this.setStore('labels', labels);
-    return labels[idx];
+    const updated = labels[idx];
+    return { ...updated, field_values: fixFieldValues(updated.field_values || {}) };
   }
 
   async deleteLabel(id: number): Promise<void> {
@@ -139,13 +187,13 @@ class TauriDB {
 
   async listTemplates(): Promise<Template[]> {
     const raw = await this.invoke<any[]>('list_templates');
-    return raw.map(t => ({ ...t, fields: JSON.parse(t.fields || '[]') }));
+    return raw.map(t => ({ ...t, fields: fixFields(JSON.parse(t.fields || '[]')) }));
   }
 
   async getTemplate(id: number): Promise<Template | null> {
     const raw = await this.invoke<any>('get_template', { id });
     if (!raw) return null;
-    return { ...raw, fields: JSON.parse(raw.fields || '[]') };
+    return { ...raw, fields: fixFields(JSON.parse(raw.fields || '[]')) };
   }
 
   async createTemplate(data: Omit<Template, 'id' | 'created_at' | 'updated_at'>): Promise<Template> {
@@ -159,8 +207,8 @@ class TauriDB {
       logoEnabled: data.logo_enabled,
       phoneEnabled: data.phone_enabled || false,
       pageSize: data.page_size || 'A4',
-      pageWidthMm: data.page_width_mm || 210,
-      pageHeightMm: data.page_height_mm || 297,
+      pageWidthMm: data.page_width_mm || 209,
+      pageHeightMm: data.page_height_mm || 295.275,
       pageOrientation: data.page_orientation || 'portrait',
       fields: JSON.stringify(data.fields),
       marginTopMm: data.margin_top_mm || 0,
@@ -168,8 +216,11 @@ class TauriDB {
       marginLeftMm: data.margin_left_mm || 0,
       marginRightMm: data.margin_right_mm || 0,
       labelGapMm: data.label_gap_mm || 0,
+      printerMarginMm: data.printer_margin_mm ?? 4.5,
+      lengthUnit: data.length_unit || 'mm',
+      fieldPaddingMm: data.field_padding_mm ?? 6,
     });
-    return { ...raw, fields: JSON.parse(raw.fields || '[]') };
+    return { ...raw, fields: fixFields(JSON.parse(raw.fields || '[]')) };
   }
 
   async updateTemplate(id: number, data: Partial<Omit<Template, 'id' | 'created_at' | 'updated_at'>>): Promise<Template> {
@@ -192,8 +243,11 @@ class TauriDB {
     if (data.margin_left_mm !== undefined) payload.marginLeftMm = data.margin_left_mm;
     if (data.margin_right_mm !== undefined) payload.marginRightMm = data.margin_right_mm;
     if (data.label_gap_mm !== undefined) payload.labelGapMm = data.label_gap_mm;
+    if (data.printer_margin_mm !== undefined) payload.printerMarginMm = data.printer_margin_mm;
+    if (data.length_unit !== undefined) payload.lengthUnit = data.length_unit;
+    if (data.field_padding_mm !== undefined) payload.fieldPaddingMm = data.field_padding_mm;
     const raw = await this.invoke<any>('update_template', payload);
-    return { ...raw, fields: JSON.parse(raw.fields || '[]') };
+    return { ...raw, fields: fixFields(JSON.parse(raw.fields || '[]')) };
   }
 
   async deleteTemplate(id: number): Promise<void> {
@@ -202,13 +256,21 @@ class TauriDB {
 
   async listJobs(): Promise<Job[]> {
     const raw = await this.invoke<any[]>('list_jobs');
-    return raw.map(j => ({ ...j, fields: JSON.parse(j.fields || '[]'), job_field_values: JSON.parse(j.job_field_values || '{}') }));
+    return raw.map(j => ({ 
+      ...j, 
+      fields: fixFields(JSON.parse(j.fields || '[]')), 
+      job_field_values: fixFieldValues(JSON.parse(j.job_field_values || '{}')) 
+    }));
   }
 
   async getJob(id: number): Promise<Job | null> {
     const raw = await this.invoke<any>('get_job', { id });
     if (!raw) return null;
-    return { ...raw, fields: JSON.parse(raw.fields || '[]'), job_field_values: JSON.parse(raw.job_field_values || '{}') };
+    return { 
+      ...raw, 
+      fields: fixFields(JSON.parse(raw.fields || '[]')), 
+      job_field_values: fixFieldValues(JSON.parse(raw.job_field_values || '{}')) 
+    };
   }
 
   async createJob(data: Omit<Job, 'id' | 'created_at' | 'updated_at'>): Promise<Job> {
@@ -235,8 +297,15 @@ class TauriDB {
       marginLeftMm: data.margin_left_mm || 0,
       marginRightMm: data.margin_right_mm || 0,
       labelGapMm: data.label_gap_mm || 0,
+      printerMarginMm: data.printer_margin_mm ?? 4.5,
+      lengthUnit: data.length_unit || 'mm',
+      fieldPaddingMm: data.field_padding_mm ?? 6,
     });
-    return { ...raw, fields: JSON.parse(raw.fields || '[]'), job_field_values: JSON.parse(raw.job_field_values || '{}') };
+    return {
+      ...raw,
+      fields: fixFields(JSON.parse(raw.fields || '[]')),
+      job_field_values: fixFieldValues(JSON.parse(raw.job_field_values || '{}'))
+    };
   }
 
   async updateJob(id: number, data: Partial<Omit<Job, 'id' | 'created_at' | 'updated_at'>>): Promise<Job> {
@@ -262,8 +331,15 @@ class TauriDB {
     if (data.margin_left_mm !== undefined) payload.marginLeftMm = data.margin_left_mm;
     if (data.margin_right_mm !== undefined) payload.marginRightMm = data.margin_right_mm;
     if (data.label_gap_mm !== undefined) payload.labelGapMm = data.label_gap_mm;
+    if (data.printer_margin_mm !== undefined) payload.printerMarginMm = data.printer_margin_mm;
+    if (data.length_unit !== undefined) payload.lengthUnit = data.length_unit;
+    if (data.field_padding_mm !== undefined) payload.fieldPaddingMm = data.field_padding_mm;
     const raw = await this.invoke<any>('update_job', payload);
-    return { ...raw, fields: JSON.parse(raw.fields || '[]'), job_field_values: JSON.parse(raw.job_field_values || '{}') };
+    return { 
+      ...raw, 
+      fields: fixFields(JSON.parse(raw.fields || '[]')), 
+      job_field_values: fixFieldValues(JSON.parse(raw.job_field_values || '{}')) 
+    };
   }
 
   async deleteJob(id: number): Promise<void> {
@@ -274,7 +350,7 @@ class TauriDB {
     const raw = await this.invoke<any[]>('list_labels', { jobId });
     return raw.map(l => ({
       ...l,
-      field_values: JSON.parse(l.field_values || '{}'),
+      field_values: fixFieldValues(JSON.parse(l.field_values || '{}')),
       shape_segments: JSON.parse(l.shape_segments || '[]'),
     }));
   }
@@ -290,7 +366,7 @@ class TauriDB {
     });
     return {
       ...raw,
-      field_values: JSON.parse(raw.field_values || '{}'),
+      field_values: fixFieldValues(JSON.parse(raw.field_values || '{}')),
       shape_segments: JSON.parse(raw.shape_segments || '[]'),
     };
   }
@@ -305,7 +381,7 @@ class TauriDB {
     const raw = await this.invoke<any>('update_label', payload);
     return {
       ...raw,
-      field_values: JSON.parse(raw.field_values || '{}'),
+      field_values: fixFieldValues(JSON.parse(raw.field_values || '{}')),
       shape_segments: JSON.parse(raw.shape_segments || '[]'),
     };
   }
@@ -324,6 +400,7 @@ class TauriDB {
       company_name: raw.company_name || '',
       company_phone: raw.company_phone || '',
       custom_shape_presets: customPresets,
+      offer_format: (raw.offer_format as 'pdf' | 'xlsx') || 'pdf',
     };
   }
 

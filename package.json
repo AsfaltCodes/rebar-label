@@ -27,6 +27,8 @@
 		"@tauri-apps/api": "^2.10.1",
 		"@tauri-apps/plugin-dialog": "^2.6.0",
 		"@tauri-apps/plugin-fs": "^2.4.5",
+		"@tauri-apps/plugin-shell": "^2.3.0",
+		"exceljs": "^4.4.0",
 		"jspdf": "^4.2.0",
 		"svelte-dnd-action": "^0.9.69"
 	}

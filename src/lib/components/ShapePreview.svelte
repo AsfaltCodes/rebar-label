@@ -21,16 +21,17 @@
       stroke-linejoin="round"
     />
     {#each renderData.segmentMidpoints as mp}
-      {@const boundsSpan = Math.max(renderData.bounds.maxX - renderData.bounds.minX, renderData.bounds.maxY - renderData.bounds.minY)}
-      <text
-        x={mp.labelX}
-        y={mp.labelY}
-        text-anchor="middle"
-        dominant-baseline="middle"
-        font-size={boundsSpan * 0.07}
-        fill="var(--color-text-secondary)"
-        font-weight="500"
-      >{mp.length}</text>
+      {#if mp.length > 0}
+        <text
+          x={mp.labelX}
+          y={mp.labelY}
+          text-anchor="middle"
+          dominant-baseline="middle"
+          font-size={renderData.shapeDim * 0.14}
+          fill="var(--color-text-secondary)"
+          font-weight="500"
+        >{mp.length}</text>
+      {/if}
     {/each}
   </svg>
 {:else}

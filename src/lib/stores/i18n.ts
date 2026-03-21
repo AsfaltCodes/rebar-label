@@ -12,6 +12,7 @@ const translations: Translations = {
 
     // TopBar
     'topbar.print': 'Print PDF',
+    'topbar.export_offer': 'Export Offer',
 
     // Common
     'common.save': 'Save',
@@ -114,6 +115,8 @@ const translations: Translations = {
     'tpl_edit.source_manual': 'Manual',
     'tpl_edit.source_total_length': 'Total Length',
     'tpl_edit.source_client_name': 'Client Name',
+    'tpl_edit.source_diameter': 'Diameter (Ø)',
+    'tpl_edit.source_buc': 'Copies (Buc.)',
     'tpl_edit.drag_hint': 'Drag to reorder',
     'tpl_edit.preview_title': 'Label Preview',
     'tpl_edit.print_layout_heading': 'Print Layout',
@@ -123,6 +126,13 @@ const translations: Translations = {
     'tpl_edit.margin_left': 'Left Margin (mm)',
     'tpl_edit.margin_right': 'Right Margin (mm)',
     'tpl_edit.label_gap': 'Label Gap (mm)',
+    'tpl_edit.printer_margin': 'Printer Margin (mm)',
+    'tpl_edit.printer_margin_hint': 'Non-printable area. Default 4.5mm for most printers.',
+    'tpl_edit.field_padding': 'Field Padding (mm)',
+    'tpl_edit.field_padding_hint': 'Distance from label edge to field text. Default 6mm.',
+    'tpl_edit.length_unit': 'Length Unit',
+    'tpl_edit.unit_mm': 'Millimeters (mm)',
+    'tpl_edit.unit_cm': 'Centimeters (cm)',
 
     // LabelEditor
     'lbl_edit.saving': 'Saving...',
@@ -184,6 +194,20 @@ const translations: Translations = {
     'settings.right': 'Right (mm)',
     'settings.gap': 'Label Gap (mm)',
     'settings.save': 'Save Settings',
+
+    // Field Input
+    'field_input.custom': 'Custom',
+
+    // XLSX
+    'xlsx.subtotal': 'Subtotal',
+
+    // Settings - Offer
+    'settings.offer_format': 'Offer Format',
+    'settings.offer_pdf': 'PDF (vector)',
+    'settings.offer_xlsx': 'Excel (XLSX)',
+
+    // Settings - Theme
+    'settings.theme': 'Theme',
   },
   ro: {
     // MenuBar / Navigation
@@ -193,6 +217,7 @@ const translations: Translations = {
 
     // TopBar
     'topbar.print': 'Exportă PDF',
+    'topbar.export_offer': 'Exportă Oferta',
 
     // Common
     'common.save': 'Salvează',
@@ -295,6 +320,8 @@ const translations: Translations = {
     'tpl_edit.source_manual': 'Manual',
     'tpl_edit.source_total_length': 'Lungime totală',
     'tpl_edit.source_client_name': 'Nume client',
+    'tpl_edit.source_diameter': 'Diametru (Ø)',
+    'tpl_edit.source_buc': 'Bucăți (Buc.)',
     'tpl_edit.drag_hint': 'Trage pentru reordonare',
     'tpl_edit.preview_title': 'Previzualizare',
     'tpl_edit.print_layout_heading': 'Margini pagină',
@@ -304,6 +331,13 @@ const translations: Translations = {
     'tpl_edit.margin_left': 'Margine stânga (mm)',
     'tpl_edit.margin_right': 'Margine dreapta (mm)',
     'tpl_edit.label_gap': 'Spațiu între etichete (mm)',
+    'tpl_edit.printer_margin': 'Margine imprimantă (mm)',
+    'tpl_edit.printer_margin_hint': 'Zona neimprimabilă. Implicit 4.5mm.',
+    'tpl_edit.field_padding': 'Padding câmpuri (mm)',
+    'tpl_edit.field_padding_hint': 'Distanța de la marginea etichetei la text. Implicit 6mm.',
+    'tpl_edit.length_unit': 'Unitate lungime',
+    'tpl_edit.unit_mm': 'Milimetri (mm)',
+    'tpl_edit.unit_cm': 'Centimetri (cm)',
 
     // LabelEditor
     'lbl_edit.saving': 'Se salvează...',
@@ -365,6 +399,20 @@ const translations: Translations = {
     'settings.right': 'Dreapta (mm)',
     'settings.gap': 'Spațiu între etichete (mm)',
     'settings.save': 'Salvează',
+
+    // Field Input
+    'field_input.custom': 'Personalizat',
+
+    // XLSX
+    'xlsx.subtotal': 'Subtotal',
+
+    // Settings - Offer
+    'settings.offer_format': 'Format ofertă',
+    'settings.offer_pdf': 'PDF (vector)',
+    'settings.offer_xlsx': 'Excel (XLSX)',
+
+    // Settings - Theme
+    'settings.theme': 'Temă',
   }
 };
 

@@ -11,16 +11,16 @@
   export let template: Partial<Template> = {
     name: '',
     sizing_mode: 'grid',
-    columns: 2,
-    rows: 5,
-    label_width_mm: 80,
-    label_height_mm: 50,
+    columns: 4,
+    rows: 2,
+    label_width_mm: 73.82,
+    label_height_mm: 104.5,
     logo_enabled: false,
     phone_enabled: false,
     page_size: 'A4',
-    page_width_mm: 210,
-    page_height_mm: 297,
-    page_orientation: 'portrait',
+    page_width_mm: 209,
+    page_height_mm: 295.275,
+    page_orientation: 'landscape',
     fields: [],
   };
   export let onSave: (data: Partial<Template>) => void = () => {};
@@ -28,21 +28,24 @@
 
   let name = template.name || '';
   let sizingMode: 'grid' | 'fixed' = template.sizing_mode || 'grid';
-  let columns = template.columns || 2;
-  let rows = template.rows || 5;
-  let width = template.label_width_mm || 80;
-  let height = template.label_height_mm || 50;
+  let columns = template.columns || 4;
+  let rows = template.rows || 2;
+  let width = template.label_width_mm || 73.82;
+  let height = template.label_height_mm || 104.5;
   let logoEnabled = template.logo_enabled || false;
   let phoneEnabled = template.phone_enabled || false;
   let pageSize = template.page_size || 'A4';
   let pageOrientation = template.page_orientation || 'portrait';
-  let pageWidth = template.page_width_mm || 210;
-  let pageHeight = template.page_height_mm || 297;
+  let pageWidth = template.page_width_mm || 209;
+  let pageHeight = template.page_height_mm || 295.275;
   let marginTop = template.margin_top_mm || 0;
   let marginBottom = template.margin_bottom_mm || 0;
   let marginLeft = template.margin_left_mm || 0;
   let marginRight = template.margin_right_mm || 0;
   let labelGap = template.label_gap_mm || 0;
+  let printerMargin = template.printer_margin_mm ?? 4.5;
+  let fieldPadding = template.field_padding_mm ?? 6;
+  let lengthUnit: 'mm' | 'cm' = template.length_unit || 'mm';
   let showPrintLayout = (marginTop || marginBottom || marginLeft || marginRight || labelGap) ? true : false;
 
   // DnD field items wrapper
@@ -104,8 +107,8 @@
   // Preview label dimensions — compute from grid or use fixed
   $: previewDims = sizingMode === 'grid' && columns > 0 && rows > 0
     ? calculateLabelDimensions(
-        effectivePageW || 210,
-        effectivePageH || 297,
+        effectivePageW || 209,
+        effectivePageH || 295.275,
         marginTop, marginBottom,
         marginLeft, marginRight,
         labelGap, columns, rows
@@ -241,6 +244,14 @@
     if (item.field.source === 'client_name') {
       item.field.scope = 'job';
     }
+    if (item.field.source === 'diameter') {
+      item.field.field_type = 'number';
+      item.field.label = 'Ø';
+    }
+    if (item.field.source === 'buc') {
+      item.field.field_type = 'number';
+      item.field.label = 'Buc.';
+    }
     fieldRows = fieldRows;
   }
 
@@ -298,6 +309,9 @@
       margin_left_mm: marginLeft,
       margin_right_mm: marginRight,
       label_gap_mm: labelGap,
+      printer_margin_mm: printerMargin,
+      field_padding_mm: fieldPadding,
+      length_unit: lengthUnit,
       fields,
     });
   }
@@ -337,11 +351,11 @@
         <div class="form-row">
           <div class="form-group">
             <label>{$_('tpl_edit.page_w')}</label>
-            <input type="number" bind:value={pageWidth} min="50" max="1000" step="1" />
+            <input type="number" bind:value={pageWidth} min="50" max="1000" step="0.5" />
           </div>
           <div class="form-group">
             <label>{$_('tpl_edit.page_h')}</label>
-            <input type="number" bind:value={pageHeight} min="50" max="1000" step="1" />
+            <input type="number" bind:value={pageHeight} min="50" max="1000" step="0.5" />
           </div>
         </div>
       {/if}
@@ -361,28 +375,49 @@
         <div class="form-row">
           <div class="form-group">
             <label>{$_('tpl_edit.margin_top')}</label>
-            <input type="number" bind:value={marginTop} min="0" max="100" step="1" />
+            <input type="number" bind:value={marginTop} min="0" max="100" step="0.5" />
           </div>
           <div class="form-group">
             <label>{$_('tpl_edit.margin_bottom')}</label>
-            <input type="number" bind:value={marginBottom} min="0" max="100" step="1" />
+            <input type="number" bind:value={marginBottom} min="0" max="100" step="0.5" />
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label>{$_('tpl_edit.margin_left')}</label>
-            <input type="number" bind:value={marginLeft} min="0" max="100" step="1" />
+            <input type="number" bind:value={marginLeft} min="0" max="100" step="0.5" />
           </div>
           <div class="form-group">
             <label>{$_('tpl_edit.margin_right')}</label>
-            <input type="number" bind:value={marginRight} min="0" max="100" step="1" />
+            <input type="number" bind:value={marginRight} min="0" max="100" step="0.5" />
           </div>
         </div>
         <div class="form-group">
           <label>{$_('tpl_edit.label_gap')}</label>
           <input type="number" bind:value={labelGap} min="0" max="50" step="0.5" />
         </div>
+        <div class="form-group">
+          <label>{$_('tpl_edit.printer_margin')}</label>
+          <input type="number" bind:value={printerMargin} min="0" max="20" step="0.5" />
+          <p class="hint">{$_('tpl_edit.printer_margin_hint')}</p>
+        </div>
+        <div class="form-group">
+          <label>{$_('tpl_edit.field_padding')}</label>
+          <input type="number" bind:value={fieldPadding} min="0" max="20" step="0.5" />
+          <p class="hint">{$_('tpl_edit.field_padding_hint')}</p>
+        </div>
       {/if}
+    </div>
+
+    <!-- Units -->
+    <div class="section">
+      <div class="form-group">
+        <label>{$_('tpl_edit.length_unit')}</label>
+        <select bind:value={lengthUnit}>
+          <option value="mm">{$_('tpl_edit.unit_mm')}</option>
+          <option value="cm">{$_('tpl_edit.unit_cm')}</option>
+        </select>
+      </div>
     </div>
 
     <!-- Label Sizing -->
@@ -585,6 +620,8 @@
                           <option value="manual">{$_('tpl_edit.source_manual')}</option>
                           <option value="total_length">{$_('tpl_edit.source_total_length')}</option>
                           <option value="client_name">{$_('tpl_edit.source_client_name')}</option>
+                          <option value="diameter">{$_('tpl_edit.source_diameter')}</option>
+                          <option value="buc">{$_('tpl_edit.source_buc')}</option>
                         </select>
                       </div>
                     </div>
@@ -643,10 +680,11 @@
         {phoneEnabled}
         companyPhone={s.company_phone}
         clientName="Sample Client"
+        {lengthUnit}
       />
     </div>
     <p class="preview-dims">
-      {Math.round(previewW)} &times; {Math.round(previewH)} mm
+      {+previewW.toFixed(2)} &times; {+previewH.toFixed(2)} mm
     </p>
   </div>
 </div>

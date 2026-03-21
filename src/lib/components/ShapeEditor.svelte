@@ -10,6 +10,7 @@
   export let shapePreset: string | null = null;
   export let segments: Segment[] = [];
   export let onChange: (preset: string | null, segs: Segment[]) => void = () => {};
+  export let lengthUnit: string = 'mm';
 
   const presetNames = Object.keys(PRESET_LABELS) as PresetName[];
   $: noShape = shapePreset === null && segments.length === 0;
@@ -185,7 +186,7 @@
             min="0"
             step="10"
           />
-          <span class="seg-unit">mm</span>
+          <span class="seg-unit">{lengthUnit}</span>
           <span class="seg-sep">/</span>
           <input
             type="number"

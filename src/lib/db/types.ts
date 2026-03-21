@@ -6,7 +6,7 @@ export interface FieldDef {
   bold: boolean;
   layout?: 'full' | 'half'; // 'full' = one per row (default), 'half' = two per row
   scope?: 'job' | 'label'; // 'job' = shared across all labels, 'label' = per-label (default)
-  source?: 'manual' | 'total_length' | 'client_name'; // 'manual' = user types, 'total_length' = auto from shape, 'client_name' = auto from job
+  source?: 'manual' | 'total_length' | 'client_name' | 'diameter' | 'buc'; // 'manual' = user types, 'total_length' = auto from shape, 'client_name' = auto from job, 'diameter' = marks field as diameter for offer Kg calc, 'buc' = marks field as copies/quantity
 }
 
 export interface Template {
@@ -28,6 +28,9 @@ export interface Template {
   margin_left_mm: number;
   margin_right_mm: number;
   label_gap_mm: number;
+  printer_margin_mm: number;
+  field_padding_mm: number;
+  length_unit: 'mm' | 'cm';
   fields: FieldDef[];
   created_at: string;
   updated_at: string;
@@ -57,6 +60,9 @@ export interface Job {
   margin_left_mm: number;
   margin_right_mm: number;
   label_gap_mm: number;
+  printer_margin_mm: number;
+  field_padding_mm: number;
+  length_unit: 'mm' | 'cm';
   created_at: string;
   updated_at: string;
 }
@@ -87,14 +93,17 @@ export interface AppSettings {
   company_name: string;
   company_phone: string;
   custom_shape_presets: CustomShapePreset[];
+  offer_format: 'pdf' | 'xlsx';
 }
 
 export const PAGE_SIZES: Record<string, { width: number; height: number }> = {
-  'A4': { width: 210, height: 297 },
+  'A4': { width: 209, height: 295.275 },
   'A3': { width: 297, height: 420 },
   'Letter': { width: 215.9, height: 279.4 },
-  'Custom': { width: 210, height: 297 },
+  'Custom': { width: 209, height: 295.275 },
 };
+
+export const REBAR_DIAMETERS = [6, 8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 32, 40] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   logo_image_path: '',
@@ -102,4 +111,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   company_name: '',
   company_phone: '',
   custom_shape_presets: [],
+  offer_format: 'pdf',
 };
